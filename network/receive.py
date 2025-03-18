@@ -2,7 +2,7 @@ import socket
 
 # Configuration du serveur UDP
 UDP_IP = "127.0.0.1"  # Adresse locale
-UDP_PORT = 8080       # Même port que le programme C
+UDP_PORT = 8081       # Nouveau port
 BUFFER_SIZE = 1024    # Même taille de buffer que C
 
 # Création du socket UDP
