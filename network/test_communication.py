@@ -57,9 +57,9 @@ def run_tests(receiver_path):
         success = send_message_to_c(message)
         
         if success:
-            print("✅ Message sent successfully")
+            print("Message sent successfully")
         else:
-            print("❌ Failed to send message")
+            print(" Failed to send message")
         
         # Give time for C program to process and print the received message
         time.sleep(0.5)
