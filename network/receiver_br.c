@@ -12,7 +12,7 @@ int main() {
     struct sockaddr_in server_addr, client_addr;
     char buffer[BUFFER_SIZE];
     socklen_t addr_len = sizeof(client_addr);
-
+  
     // Création socket
     if ((sock = socket(AF_INET, SOCK_DGRAM, 0)) < 0) {
         perror("Erreur socket");
