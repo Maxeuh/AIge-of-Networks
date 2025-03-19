@@ -3,51 +3,65 @@
 #include <string.h>
 #include <unistd.h>
 #include <arpa/inet.h>
+#include <fcntl.h>
+#include <errno.h>
 
-#define UDP_PORT 8080
+#define UDP_RECEIVE_PORT 8080
+#define UDP_SEND_PORT 9090
 #define BUFFER_SIZE 1024
 
 int main() {
-    int sock;
-    struct sockaddr_in broadcast_addr;
+    int udp_recv_sock, udp_send_sock;
+    struct sockaddr_in udp_recv_addr, udp_client_addr, udp_send_addr;
     char buffer[BUFFER_SIZE];
+    socklen_t addr_len = sizeof(udp_client_addr);
 
-    // Création socket
-    if ((sock = socket(AF_INET, SOCK_DGRAM, 0)) < 0) {
-        perror("Erreur socket");
+    // Socket réception (étape 2️⃣)
+    if ((udp_recv_sock = socket(AF_INET, SOCK_DGRAM, 0)) < 0) {
+        perror("Erreur socket réception");
         exit(EXIT_FAILURE);
     }
 
-    // Activation du broadcast
-    int broadcast_enable = 1;
-    if (setsockopt(sock, SOL_SOCKET, SO_BROADCAST, 
-                   &broadcast_enable, sizeof(broadcast_enable)) < 0) {
-        perror("Erreur activation broadcast");
+    // Socket envoi vers Python (étape 3️⃣)
+    if ((udp_send_sock = socket(AF_INET, SOCK_DGRAM, 0)) < 0) {
+        perror("Erreur socket envoi");
         exit(EXIT_FAILURE);
     }
 
-    // Configuration adresse broadcast
-    memset(&broadcast_addr, 0, sizeof(broadcast_addr));
-    broadcast_addr.sin_family = AF_INET;
-    broadcast_addr.sin_port = htons(UDP_PORT);
-    broadcast_addr.sin_addr.s_addr = inet_addr("255.255.255.255"); // Adresse broadcast
+    memset(&udp_recv_addr, 0, sizeof(udp_recv_addr));
+    udp_recv_addr.sin_family = AF_INET;
+    udp_recv_addr.sin_addr.s_addr = INADDR_ANY;
+    udp_recv_addr.sin_port = htons(UDP_RECEIVE_PORT);
 
-    printf("Mode broadcast activé. Tapez vos messages:\n");
-    
+    if (bind(udp_recv_sock, (struct sockaddr*)&udp_recv_addr, sizeof(udp_recv_addr)) < 0) {
+        perror("Erreur bind");
+        exit(EXIT_FAILURE);
+    }
+
+    // Configuration pour envoi vers Python
+    memset(&udp_send_addr, 0, sizeof(udp_send_addr));
+    udp_send_addr.sin_family = AF_INET;
+    udp_send_addr.sin_addr.s_addr = inet_addr("127.0.0.1");
+    udp_send_addr.sin_port = htons(UDP_SEND_PORT);
+
+    printf("En attente sur port %d, transfert vers Python sur port %d\n", 
+           UDP_RECEIVE_PORT, UDP_SEND_PORT);
+
     while (1) {
-        printf("> ");
-        fgets(buffer, BUFFER_SIZE, stdin);
-        buffer[strcspn(buffer, "\n")] = 0;
-
-        if (strcmp(buffer, "quit") == 0) break;
-
-        // Envoi en broadcast
-        if (sendto(sock, buffer, strlen(buffer), 0,
-                   (struct sockaddr*)&broadcast_addr, sizeof(broadcast_addr)) < 0) {
-            perror("Erreur envoi broadcast");
+        int recv_len = recvfrom(udp_recv_sock, buffer, BUFFER_SIZE, 0,
+                               (struct sockaddr*)&udp_client_addr, &addr_len);
+        
+        if (recv_len > 0) {
+            buffer[recv_len] = '\0';
+            printf("Reçu: %s\n", buffer);
+            
+            // Transfert vers Python (étape 3️⃣)
+            sendto(udp_send_sock, buffer, recv_len, 0,
+                   (struct sockaddr*)&udp_send_addr, sizeof(udp_send_addr));
         }
     }
 
-    close(sock);
+    close(udp_recv_sock);
+    close(udp_send_sock);
     return 0;
 }
