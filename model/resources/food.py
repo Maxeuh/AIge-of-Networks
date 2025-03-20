@@ -1,5 +1,6 @@
 from model.resources.resource import Resource
 
+
 class Food(Resource):
     """This class represents the Food resource"""
     

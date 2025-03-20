@@ -1,5 +1,7 @@
-from blessed import Terminal
 import os
+
+from blessed import Terminal
+
 
 class LoadMenu:
     """
@@ -27,9 +29,15 @@ class LoadMenu:
             # Lister les fichiers dans le répertoire
             if os.path.exists(save_directory):
                 save_files = sorted(
-                    [os.path.splitext(f)[0] for f in os.listdir(save_directory) if os.path.isfile(os.path.join(save_directory, f))],
-                    key=lambda x: os.path.getmtime(os.path.join(save_directory, x + ".pkl")),
-                    reverse=True
+                    [
+                        os.path.splitext(f)[0]
+                        for f in os.listdir(save_directory)
+                        if os.path.isfile(os.path.join(save_directory, f))
+                    ],
+                    key=lambda x: os.path.getmtime(
+                        os.path.join(save_directory, x + ".pkl")
+                    ),
+                    reverse=True,
                 )
                 if not save_files:
                     return ["No save files found"]
@@ -74,7 +82,7 @@ class LoadMenu:
     #                 self.current_option += 1
     #             elif key.code in [self.term.KEY_ENTER, '\n', '\r']:
     #                 return options[self.current_option].value
-                
+
     def show(self) -> str:
         """
         Show the menu in the terminal window and allow the user to select a save file.
@@ -86,10 +94,10 @@ class LoadMenu:
             while True:
                 print(self.term.clear)
                 options = self.__get_menu_options()
-                
+
                 # Ajouter l'option pour revenir en arrière
                 options.append("Back")
-                
+
                 print(self.term.center(self.term.bold_red("Load Game")))
 
                 for i, option in enumerate(options):
@@ -98,20 +106,26 @@ class LoadMenu:
                         print(self.term.on_black(self.term.white(f"→ {option}")))
                     else:
                         print(f"  {option}")
-                
+
                 key = self.term.inkey()
 
                 if key.code == self.term.KEY_UP and self.current_option > 0:
                     self.current_option -= 1
-                elif key.code == self.term.KEY_DOWN and self.current_option < len(options) - 1:
+                elif (
+                    key.code == self.term.KEY_DOWN
+                    and self.current_option < len(options) - 1
+                ):
                     self.current_option += 1
-                elif key.lower() == 'q':  # Quitter le menu
+                elif key.lower() == "q":  # Quitter le menu
                     return None
-                elif key.code in [self.term.KEY_ENTER, '\n', '\r']:
+                elif key.code in [self.term.KEY_ENTER, "\n", "\r"]:
                     # Gérer l'option "Back"
                     if options[self.current_option] == "Back":
                         return None
                     # Gérer le cas des messages d'erreur ou sélectionner un fichier valide
-                    elif options[self.current_option] in ["No save files found", "Save directory not found"]:
+                    elif options[self.current_option] in [
+                        "No save files found",
+                        "Save directory not found",
+                    ]:
                         return None
                     return options[self.current_option]

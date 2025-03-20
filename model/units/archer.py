@@ -1,7 +1,7 @@
-from model.units.unit import Unit
 from model.resources.food import Food
 from model.resources.gold import Gold
 from model.resources.wood import Wood
+from model.units.unit import Unit
 
 
 class Archer(Unit):

@@ -1,9 +1,10 @@
 from model.buildings.building import Building
 from model.resources.wood import Wood
 
+
 class TownCenter(Building):
     """This class represents the Town Center building."""
-    
+
     def __init__(self) -> None:
         """Initialize a TownCenter object."""
         super().__init__("Town Center", "T", 1000, {Wood(): 350}, 4, 150)

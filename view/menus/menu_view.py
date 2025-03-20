@@ -1,5 +1,7 @@
 from blessed import Terminal
+
 from util.state_manager import GameState, MenuOptions
+
 
 class MenuView:
     """
@@ -24,11 +26,26 @@ class MenuView:
         """
         game_state = GameState(game_state)
         if game_state == GameState.NOT_STARTED:
-            return [MenuOptions.START_GAME, MenuOptions.LOAD_GAME, MenuOptions.SETTINGS, MenuOptions.EXIT]
+            return [
+                MenuOptions.START_GAME,
+                MenuOptions.LOAD_GAME,
+                MenuOptions.SETTINGS,
+                MenuOptions.EXIT,
+            ]
         elif game_state == GameState.PAUSED:
-            return [MenuOptions.RESUME, MenuOptions.SAVE_GAME, MenuOptions.SETTINGS, MenuOptions.EXIT]
+            return [
+                MenuOptions.RESUME,
+                MenuOptions.SAVE_GAME,
+                MenuOptions.SETTINGS,
+                MenuOptions.EXIT,
+            ]
         elif game_state == GameState.GAME_OVER:
-            return [MenuOptions.RESTART, MenuOptions.LOAD_GAME, MenuOptions.SETTINGS, MenuOptions.EXIT]
+            return [
+                MenuOptions.RESTART,
+                MenuOptions.LOAD_GAME,
+                MenuOptions.SETTINGS,
+                MenuOptions.EXIT,
+            ]
 
     def show(self, game_state: GameState) -> int:
         """
@@ -58,7 +75,10 @@ class MenuView:
 
                 if key.code == self.term.KEY_UP and self.current_option > 0:
                     self.current_option -= 1
-                elif key.code == self.term.KEY_DOWN and self.current_option < len(options) - 1:
+                elif (
+                    key.code == self.term.KEY_DOWN
+                    and self.current_option < len(options) - 1
+                ):
                     self.current_option += 1
-                elif key.code in [self.term.KEY_ENTER, '\n', '\r']:
+                elif key.code in [self.term.KEY_ENTER, "\n", "\r"]:
                     return options[self.current_option].value

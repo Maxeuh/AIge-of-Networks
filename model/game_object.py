@@ -1,5 +1,6 @@
 from util.coordinate import Coordinate
 
+
 class GameObject:
     """This class represents an object in the game."""
     

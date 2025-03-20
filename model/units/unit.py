@@ -2,6 +2,7 @@
 from model.entity import Entity
 from model.resources.resource import Resource
 
+
 class Unit(Entity):
     """This class represents the units on the map."""
 

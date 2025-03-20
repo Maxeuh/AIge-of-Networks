@@ -1,9 +1,13 @@
+import threading
+import time
+import typing
+
+from blessed import Terminal
+
+from util.coordinate import Coordinate
 from util.map import Map
 from view.base_view import BaseView
-from blessed import Terminal
-from util.coordinate import Coordinate
-import threading, time
-import typing
+
 if typing.TYPE_CHECKING:
     from controller.view_controller import ViewController
 
@@ -17,6 +21,7 @@ if typing.TYPE_CHECKING:
 # [4] 3 > (3,1)
 # [5] 4 > Bottom is here
 
+
 class TerminalView(BaseView):
     """
     Terminal view for the game. It's used to display the game map and allow the player to navigate it using ZQSD and the arrow keys.
@@ -24,7 +29,7 @@ class TerminalView(BaseView):
     Automatically update each tick.
     """
 
-    def __init__(self, controller: 'ViewController') -> None:
+    def __init__(self, controller: "ViewController") -> None:
         """Initialize the menu view."""
         super().__init__(controller)
         self.__terminal = Terminal()
@@ -38,7 +43,7 @@ class TerminalView(BaseView):
         self.__display_thread = threading.Thread(target=self.__display_loop)
         # self.__input_thread = threading.Thread(target=self.__input_loop)
         self.__isFaster = False
-    
+
     def show(self) -> None:
         """Start the display and input threads."""
         self.__stop_event.clear()
@@ -47,7 +52,7 @@ class TerminalView(BaseView):
             self.__display_thread.start()
         # self.__input_thread.start()
         self.__input_loop()
-    
+
     def __size(self) -> None:
         """
         Take care of the fact that the first line is always hidden and the last line is the n+1 line.
@@ -84,8 +89,7 @@ class TerminalView(BaseView):
         map_lines = str(self.__view).split("\n")
         cropped_lines = [line[:map_width] for line in map_lines[:map_height]]
         return cropped_lines
-    
-    
+
     def __colored_line(self, line: str, frame_line: str, y: int) -> str:
         """
         Color the map elements: uppercase letters in red and bold, lowercase letters in blue, and hide empty spaces.
@@ -96,39 +100,44 @@ class TerminalView(BaseView):
         abs_y = self.__from_coord.get_y() + y
         for char in line:
             abs_x = self.__from_coord.get_x() + x
-            if char == '·':
-                colored_line += ' '
-            elif char == 'G':  # Gold 
+            if char == "·":
+                colored_line += " "
+            elif char == "G":  # Gold
                 colored_line += f"\033[33mG\033[0m"  # Yellow
-            elif char == 'W':  # Wood
+            elif char == "W":  # Wood
                 colored_line += f"\033[38;5;94mW\033[0m"  # Brown
-            elif char == 'F':  # Food
+            elif char == "F":  # Food
                 colored_line += f"\033[32mF\033[0m"  # Green
             else:
                 color = self.__map.indicate_color(Coordinate(abs_x, abs_y))
                 if color == "white":
                     colored_line += char
                 elif color == "blue":
-                    colored_line += f'\033[34m{char}\033[0m'
+                    colored_line += f"\033[34m{char}\033[0m"
                 elif color == "red":
-                    colored_line += f'\033[31m{char}\033[0m'
+                    colored_line += f"\033[31m{char}\033[0m"
                 elif color == "green":
-                    colored_line += f'\033[32m{char}\033[0m'
+                    colored_line += f"\033[32m{char}\033[0m"
                 elif color == "yellow":
-                    colored_line += f'\033[33m{char}\033[0m'
+                    colored_line += f"\033[33m{char}\033[0m"
                 elif color == "purple":
-                    colored_line += f'\033[35m{char}\033[0m'
+                    colored_line += f"\033[35m{char}\033[0m"
                 elif color == "cyan":
-                    colored_line += f'\033[36m{char}\033[0m'
+                    colored_line += f"\033[36m{char}\033[0m"
                 elif color == "pink":
-                    colored_line += f'\033[95m{char}\033[0m'
+                    colored_line += f"\033[95m{char}\033[0m"
                 elif color == "orange":
-                    colored_line += f'\033[93m{char}\033[0m'
+                    colored_line += f"\033[93m{char}\033[0m"
                 else:
                     # Default color handling
-                    colored_line += f'\033[33m{char}\033[0m'
+                    colored_line += f"\033[33m{char}\033[0m"
             x += 1
-        return frame_line[:1] + colored_line + self.__terminal.normal + frame_line[1 + len(line):]
+        return (
+            frame_line[:1]
+            + colored_line
+            + self.__terminal.normal
+            + frame_line[1 + len(line) :]
+        )
 
     def __add_coord(self, line: list[str]) -> list[str]:
         """
@@ -140,13 +149,13 @@ class TerminalView(BaseView):
         top_left = f"({self.__from_coord.get_x()}, {self.__from_coord.get_y()})"
         bottom_right_coord = self.__to_coord - 1
         bottom_right = f"({bottom_right_coord.get_x()}, {bottom_right_coord.get_y()})"
-        
+
         # Determine speed factor based on self.__isFaster
-        speed_factor = "x5" if self.__isFaster else "x1"
-        
+        speed_factor = "x10" if self.__isFaster else "x1"
+
         # Add the speed factor to the coordinates
         top_left = f"{top_left} {speed_factor}"
-        
+
         # Update the top-left and bottom-right coordinates in the line
         line[0] = f"{top_left}{line[0][len(top_left):]}"
         line[-1] = f"{line[-1][:len(line[-1]) - len(bottom_right)]}{bottom_right}"
@@ -162,7 +171,11 @@ class TerminalView(BaseView):
                 self.__size()
                 if self.__terminal_width < 10 or self.__terminal_height < 10:
                     print(self.__terminal.clear(), end="")
-                    print(self.__terminal.bold_red("Error: Terminal size is too small. Please resize the terminal."))
+                    print(
+                        self.__terminal.bold_red(
+                            "Error: Terminal size is too small. Please resize the terminal."
+                        )
+                    )
                     self.__terminal.flush()
                     time.sleep(1)
                     continue
@@ -171,14 +184,18 @@ class TerminalView(BaseView):
                 map_part = self.__str_map()
                 output = []
                 y = 0
-                for i, line in enumerate(map_part[:min(len(map_part), self.__terminal_height - 2)]):
+                for i, line in enumerate(
+                    map_part[: min(len(map_part), self.__terminal_height - 2)]
+                ):
                     frame[i + 1] = self.__colored_line(line, frame[i + 1], y)
                     y += 1
                 frame = self.__add_coord(frame)
 
                 # Join the frame into a single string to minimize I/O calls
                 output.append("\n".join(frame))
-                print(self.__terminal.move(0, 0) + "".join(output), end="")  # Use cursor positioning
+                print(
+                    self.__terminal.move(0, 0) + "".join(output), end=""
+                )  # Use cursor positioning
                 self.__terminal.flush()
                 time.sleep(1 / self._BaseView__controller.get_settings().fps.value)
 
@@ -237,8 +254,20 @@ class TerminalView(BaseView):
                     self.__isFaster = False
 
             self.__from_coord = Coordinate(
-                max(0, min(self.__map.get_size() - self.__terminal_width + 2, self.__from_coord.get_x())),
-                max(0, min(self.__map.get_size() - self.__terminal_height + 2, self.__from_coord.get_y()))
+                max(
+                    0,
+                    min(
+                        self.__map.get_size() - self.__terminal_width + 2,
+                        self.__from_coord.get_x(),
+                    ),
+                ),
+                max(
+                    0,
+                    min(
+                        self.__map.get_size() - self.__terminal_height + 2,
+                        self.__from_coord.get_y(),
+                    ),
+                ),
             )
 
     def exit(self):

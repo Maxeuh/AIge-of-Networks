@@ -1,5 +1,6 @@
 from model.game_object import GameObject
 
+
 class Resource(GameObject):
     """This class represents the resources on the map"""
     

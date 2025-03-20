@@ -1,3 +1,4 @@
 from controller.menu_controller import MenuController
 
-MenuController()
+if __name__ == "__main__":
+    MenuController()

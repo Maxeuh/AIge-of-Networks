@@ -1,5 +1,6 @@
 from model.resources.resource import Resource
 
+
 class Wood(Resource):
     """This class represents the Wood resource"""
     

@@ -1,6 +1,6 @@
 class Coordinate:
     """Used to represent the coordinates of the tiles in the grid."""
-    
+
     def __init__(self, x: int, y: int):
         """
         Initialize a Coordinate object.
@@ -12,7 +12,7 @@ class Coordinate:
         """
         self.__x = x
         self.__y = y
-    
+
     def set_x(self, x: int) -> None:
         """
         Setter method for the x coordinate.
@@ -21,7 +21,7 @@ class Coordinate:
         :type x: int
         """
         self.__x = x
-    
+
     def set_y(self, y: int) -> None:
         """
         Setter method for the y coordinate.
@@ -30,7 +30,7 @@ class Coordinate:
         :type y: int
         """
         self.__y = y
-    
+
     def get_x(self) -> int:
         """
         Getter method for the x coordinate.
@@ -39,7 +39,7 @@ class Coordinate:
         :rtype: int
         """
         return self.__x
-    
+
     def get_y(self) -> int:
         """
         Getter method for the y coordinate.
@@ -48,8 +48,8 @@ class Coordinate:
         :rtype: int
         """
         return self.__y
-    
-    def distance(self, other: 'Coordinate') -> float:
+
+    def distance(self, other: "Coordinate") -> float:
         """
         Calculate the Euclidean distance between two coordinates.
 
@@ -60,9 +60,11 @@ class Coordinate:
         """
         if not isinstance(other, Coordinate):
             return None
-        return ((self.get_x() - other.get_x())**2 + (self.get_y() - other.get_y())**2)**0.5
-    
-    def is_in_range(self, other: 'Coordinate', distance_range: float) -> bool:
+        return (
+            (self.get_x() - other.get_x()) ** 2 + (self.get_y() - other.get_y()) ** 2
+        ) ** 0.5
+
+    def is_in_range(self, other: "Coordinate", distance_range: float) -> bool:
         """
         Check if the distance between two coordinates is within a certain range.
 
@@ -76,8 +78,8 @@ class Coordinate:
         if not isinstance(other, Coordinate):
             return False
         return self.distance(other) <= distance_range + 1e-16
-    
-    def is_adjacent(self, other: 'Coordinate') -> bool:
+
+    def is_adjacent(self, other: "Coordinate") -> bool:
         """
         Check if two coordinates are adjacent (including diagonals).
 
@@ -89,7 +91,7 @@ class Coordinate:
         if not isinstance(other, Coordinate):
             return False
         return self != other and self.is_in_range(other, 2**0.5)
-    
+
     def __hash__(self) -> int:
         """
         Hash for the coordinates to be used in dictionaries.
@@ -98,7 +100,7 @@ class Coordinate:
         :rtype: int
         """
         return hash((self.get_x(), self.get_y()))
-    
+
     def __eq__(self, other: object) -> bool:
         """
         Equality check for the coordinates.
@@ -111,8 +113,8 @@ class Coordinate:
         if not isinstance(other, Coordinate):
             return False
         return self.get_x() == other.get_x() and self.get_y() == other.get_y()
-    
-    def __lt__(self, other: 'Coordinate') -> bool:
+
+    def __lt__(self, other: "Coordinate") -> bool:
         """
         Less than comparison between two coordinates. (Symbol: <)
 
@@ -128,8 +130,8 @@ class Coordinate:
         if not isinstance(other, Coordinate):
             return False
         return self.get_x() < other.get_x() and self.get_y() < other.get_y()
-    
-    def __le__(self, other: 'Coordinate') -> bool:
+
+    def __le__(self, other: "Coordinate") -> bool:
         """
         Less than or equal to comparison between two coordinates. (Symbol: <=)
 
@@ -146,7 +148,7 @@ class Coordinate:
             return False
         return self.get_x() <= other.get_x() and self.get_y() <= other.get_y()
 
-    def __gt__(self, other: 'Coordinate') -> bool:
+    def __gt__(self, other: "Coordinate") -> bool:
         """
         Less than or equal to comparison between two coordinates. (Symbol: <=)
 
@@ -162,8 +164,8 @@ class Coordinate:
         if not isinstance(other, Coordinate):
             return False
         return self.get_x() > other.get_x() and self.get_y() > other.get_y()
-    
-    def __ge__(self, other: 'Coordinate') -> bool:
+
+    def __ge__(self, other: "Coordinate") -> bool:
         """
         Greater than or equal to comparison between two coordinates. (Symbol: >=)
 
@@ -180,7 +182,7 @@ class Coordinate:
             return False
         return self.get_x() >= other.get_x() and self.get_y() >= other.get_y()
 
-    def __add__(self, other: 'Coordinate') -> 'Coordinate':
+    def __add__(self, other: "Coordinate") -> "Coordinate":
         """
         Addition of a coordinate with another coordinate or an integer.
 
@@ -194,8 +196,8 @@ class Coordinate:
         if not isinstance(other, Coordinate):
             return None
         return Coordinate(self.get_x() + other.get_x(), self.get_y() + other.get_y())
-    
-    def __sub__(self, other: 'Coordinate') -> 'Coordinate':
+
+    def __sub__(self, other: "Coordinate") -> "Coordinate":
         """
         Subtraction of a coordinate with another coordinate or an integer.
 
@@ -209,8 +211,8 @@ class Coordinate:
         if not isinstance(other, Coordinate):
             return None
         return Coordinate(self.get_x() - other.get_x(), self.get_y() - other.get_y())
-    
-    def __mul__(self, other: 'Coordinate') -> 'Coordinate':
+
+    def __mul__(self, other: "Coordinate") -> "Coordinate":
         """
         Multiplication of a coordinate with another coordinate or an integer.
 
@@ -224,8 +226,8 @@ class Coordinate:
         if not isinstance(other, Coordinate):
             return None
         return Coordinate(self.get_x() * other.get_x(), self.get_y() * other.get_y())
-    
-    def __truediv__(self, other: 'Coordinate') -> 'Coordinate':
+
+    def __truediv__(self, other: "Coordinate") -> "Coordinate":
         """
         Division of a coordinate with another coordinate or an integer.
 
@@ -239,8 +241,8 @@ class Coordinate:
         if not isinstance(other, Coordinate):
             return None
         return Coordinate(self.get_x() / other.get_x(), self.get_y() / other.get_y())
-    
-    def __floordiv__(self, other: 'Coordinate') -> 'Coordinate':
+
+    def __floordiv__(self, other: "Coordinate") -> "Coordinate":
         """
         Floor division of a coordinate with another coordinate or an integer.
 
@@ -254,8 +256,8 @@ class Coordinate:
         if not isinstance(other, Coordinate):
             return None
         return Coordinate(self.get_x() // other.get_x(), self.get_y() // other.get_y())
-    
-    def __mod__(self, other: 'Coordinate') -> 'Coordinate':
+
+    def __mod__(self, other: "Coordinate") -> "Coordinate":
         """
         Modulus of a coordinate with another coordinate or an integer.
 
@@ -269,8 +271,8 @@ class Coordinate:
         if not isinstance(other, Coordinate):
             return None
         return Coordinate(self.get_x() % other.get_x(), self.get_y() % other.get_y())
-    
-    def __pow__(self, other: 'Coordinate') -> 'Coordinate':
+
+    def __pow__(self, other: "Coordinate") -> "Coordinate":
         """
         Power of a coordinate with another coordinate or an integer.
 
@@ -284,8 +286,8 @@ class Coordinate:
         if not isinstance(other, Coordinate):
             return None
         return Coordinate(self.get_x() ** other.get_x(), self.get_y() ** other.get_y())
-    
-    def __lshift__(self, other: 'Coordinate') -> 'Coordinate':
+
+    def __lshift__(self, other: "Coordinate") -> "Coordinate":
         """
         Left shift of a coordinate with another coordinate or an integer.
 
@@ -299,8 +301,8 @@ class Coordinate:
         if not isinstance(other, Coordinate):
             return None
         return Coordinate(self.get_x() << other.get_x(), self.get_y() << other.get_y())
-    
-    def __rshift__(self, other: 'Coordinate') -> 'Coordinate':
+
+    def __rshift__(self, other: "Coordinate") -> "Coordinate":
         """
         Right shift of a coordinate with another coordinate or an integer.
 
@@ -314,8 +316,8 @@ class Coordinate:
         if not isinstance(other, Coordinate):
             return None
         return Coordinate(self.get_x() >> other.get_x(), self.get_y() >> other.get_y())
-    
-    def __and__(self, other: 'Coordinate') -> 'Coordinate':
+
+    def __and__(self, other: "Coordinate") -> "Coordinate":
         """
         Bitwise and of a coordinate with another coordinate or an integer.
 
@@ -329,8 +331,8 @@ class Coordinate:
         if not isinstance(other, Coordinate):
             return None
         return Coordinate(self.get_x() & other.get_x(), self.get_y() & other.get_y())
-    
-    def __xor__(self, other: 'Coordinate') -> 'Coordinate':
+
+    def __xor__(self, other: "Coordinate") -> "Coordinate":
         """
         Bitwise xor of a coordinate with another coordinate or an integer.
 
@@ -344,8 +346,8 @@ class Coordinate:
         if not isinstance(other, Coordinate):
             return None
         return Coordinate(self.get_x() ^ other.get_x(), self.get_y() ^ other.get_y())
-    
-    def __or__(self, other: 'Coordinate') -> 'Coordinate':
+
+    def __or__(self, other: "Coordinate") -> "Coordinate":
         """
         Bitwise or of a coordinate with another coordinate or an integer.
 
@@ -359,8 +361,8 @@ class Coordinate:
         if not isinstance(other, Coordinate):
             return None
         return Coordinate(self.get_x() | other.get_x(), self.get_y() | other.get_y())
-    
-    def __neg__(self) -> 'Coordinate':
+
+    def __neg__(self) -> "Coordinate":
         """
         Negation of the coordinates.
 
@@ -368,8 +370,8 @@ class Coordinate:
         :rtype: Coordinate
         """
         return Coordinate(-self.get_x(), -self.get_y())
-    
-    def __pos__(self) -> 'Coordinate':
+
+    def __pos__(self) -> "Coordinate":
         """
         Positive of the coordinates.
 
@@ -377,8 +379,8 @@ class Coordinate:
         :rtype: Coordinate
         """
         return Coordinate(+self.get_x(), +self.get_y())
-    
-    def __abs__(self) -> 'Coordinate':
+
+    def __abs__(self) -> "Coordinate":
         """
         Absolute value of the coordinates.
 
@@ -386,8 +388,8 @@ class Coordinate:
         :rtype: Coordinate
         """
         return Coordinate(abs(self.get_x()), abs(self.get_y()))
-    
-    def __invert__(self) -> 'Coordinate':
+
+    def __invert__(self) -> "Coordinate":
         """
         Invert the coordinates.
 
@@ -395,7 +397,7 @@ class Coordinate:
         :rtype: Coordinate
         """
         return Coordinate(~self.get_x(), ~self.get_y())
-    
+
     def __str__(self) -> str:
         """
         String representation of the coordinates.

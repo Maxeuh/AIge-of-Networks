@@ -1,5 +1,6 @@
 from util.state_manager import FPS, MapSize, MapType, StartingCondition
 
+
 class Settings:
     """
     Create a new Settings object with default values. It is used to store the game settings and allows the user to change them.
@@ -13,6 +14,7 @@ class Settings:
     :ivar fps: The frames per second setting.
     :vartype fps: int
     """
+
     def __init__(self) -> None:
         """Create a new Settings object with default values."""
         self.map_type: MapType = MapType.RICH

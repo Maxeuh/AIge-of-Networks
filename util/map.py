@@ -1,14 +1,16 @@
+import typing
 from collections import defaultdict
-from model.game_object import GameObject
-from model.entity import Entity
-from util.coordinate import Coordinate
-from model.entity import Entity
-from model.resources.resource import Resource
-from model.buildings.farm import Farm
+
 from pathfinding.core.diagonal_movement import DiagonalMovement
 from pathfinding.core.grid import Grid
 from pathfinding.finder.a_star import AStarFinder
-import typing
+
+from model.buildings.farm import Farm
+from model.entity import Entity
+from model.game_object import GameObject
+from model.resources.resource import Resource
+from util.coordinate import Coordinate
+
 if typing.TYPE_CHECKING:
     from model.player.player import Player
 
@@ -16,7 +18,9 @@ if typing.TYPE_CHECKING:
 This file contains the Map class which is used to represent the map of the game and the methods associated with it.
 It serves as the heart of the model-the representation of datas
 """
-class Map():
+
+
+class Map:
     DIRECTIONS = [(-1, 0), (1, 0), (0, -1), (0, 1), (-1, -1), (-1, 1), (1, -1), (1, 1)]
     """
     The Map class is used to represent the map of the game. It contains the matrix of the map and the methods associated with it.
@@ -40,7 +44,7 @@ class Map():
         :rtype: int
         """
         return self.__size
-    
+
     def check_placement(self, object: GameObject, coordinate: Coordinate) -> bool:
         """
         Check if an entity can be placed at a certain coordinate.
@@ -54,9 +58,16 @@ class Map():
         """
         for x in range(object.get_size()):
             for y in range(object.get_size()):
-                if coordinate is None or not (Coordinate(0, 0) <= coordinate and (coordinate + object.get_size() - 1) <= Coordinate(self.get_size() - 1, self.get_size() - 1)):
+                if coordinate is None or not (
+                    Coordinate(0, 0) <= coordinate
+                    and (coordinate + object.get_size() - 1)
+                    <= Coordinate(self.get_size() - 1, self.get_size() - 1)
+                ):
                     return False
-                if self.get(Coordinate(coordinate.get_x() + x, coordinate.get_y() + y)) is not None:
+                if (
+                    self.get(Coordinate(coordinate.get_x() + x, coordinate.get_y() + y))
+                    is not None
+                ):
                     return False
         return True
 
@@ -71,10 +82,14 @@ class Map():
         :raises ValueError: If the object cannot be placed at the given coordinate.
         """
         if not self.check_placement(object, coordinate):
-            raise ValueError(f"Cannot place object at the given coordinate {coordinate}.")
+            raise ValueError(
+                f"Cannot place object at the given coordinate {coordinate}."
+            )
         for x in range(object.get_size()):
             for y in range(object.get_size()):
-                self.__matrix[Coordinate(coordinate.get_x() + x, coordinate.get_y() + y)] = object
+                self.__matrix[
+                    Coordinate(coordinate.get_x() + x, coordinate.get_y() + y)
+                ] = object
 
     def __force_add(self, object: GameObject, coordinate: Coordinate):
         """
@@ -97,16 +112,22 @@ class Map():
         :rtype: GameObject
         :raises ValueError: If the coordinate is out of bounds or there is no entity at the given coordinate.
         """
-        if not (Coordinate(0, 0) <= coordinate <= Coordinate(self.get_size(), self.get_size())):
+        if not (
+            Coordinate(0, 0)
+            <= coordinate
+            <= Coordinate(self.get_size(), self.get_size())
+        ):
             raise ValueError(f"Coordinate is out of bounds.{coordinate}")
         object: GameObject = self.__matrix[coordinate]
         if object is None:
             raise ValueError(f"No entity at the given coordinate.{coordinate}")
         for x in range(object.get_size()):
             for y in range(object.get_size()):
-                self.__matrix[Coordinate(coordinate.get_x() + x, coordinate.get_y() + y)] = None
+                self.__matrix[
+                    Coordinate(coordinate.get_x() + x, coordinate.get_y() + y)
+                ] = None
         return object
-    
+
     def __force_remove(self, coordinate: Coordinate) -> GameObject:
         """
         Forcefully remove the entity at a certain coordinate.
@@ -131,7 +152,9 @@ class Map():
         :raises ValueError: If the new coordinate is not adjacent or not available.
         """
         if not object.get_coordinate().is_adjacent(new_coordinate):
-            raise ValueError(f"New coordinate {new_coordinate} is not adjacent to the entity's current coordinate { object.get_coordinate()}.")
+            raise ValueError(
+                f"New coordinate {new_coordinate} is not adjacent to the entity's current coordinate { object.get_coordinate()}."
+            )
         if not self.check_placement(object, new_coordinate):
             raise ValueError("New coordinate is not available.")
         self.remove(object.get_coordinate())
@@ -148,7 +171,7 @@ class Map():
         """
         self.__force_remove(object.get_coordinate())
         self.__force_add(object, new_coordinate)
-    
+
     def get(self, coordinate: Coordinate) -> GameObject:
         """
         Get the entity at a certain coordinate.
@@ -159,7 +182,7 @@ class Map():
         :rtype: GameObject
         """
         return self.__matrix[coordinate]
-    
+
     def get_map(self) -> defaultdict[Coordinate, GameObject]:
         """
         Get the map as a matrix.
@@ -168,7 +191,7 @@ class Map():
         :rtype: defaultdict[Coordinate, GameObject]
         """
         return self.__matrix
-    
+
     def get_map_list(self) -> list[list[GameObject]]:
         """
         Get the map as a list of lists.
@@ -176,9 +199,12 @@ class Map():
         :return: The map as a list of lists.
         :rtype: list[list[GameObject]]
         """
-        return [[self.__matrix[Coordinate(i, j)] for j in range(self.get_size())] for i in range(self.get_size())]
-    
-    def get_from_to(self, from_coord: Coordinate, to_coord: Coordinate) -> 'Map':
+        return [
+            [self.__matrix[Coordinate(i, j)] for j in range(self.get_size())]
+            for i in range(self.get_size())
+        ]
+
+    def get_from_to(self, from_coord: Coordinate, to_coord: Coordinate) -> "Map":
         """
         Get the map from a certain coordinate to another as a new Map with size based on the range between coordinates.
 
@@ -189,16 +215,22 @@ class Map():
         :return: A new map from the starting coordinate to the ending coordinate.
         :rtype: Map
         """
-        new_size = max(to_coord.get_x() - from_coord.get_x(), to_coord.get_y() - from_coord.get_y())
+        new_size = max(
+            to_coord.get_x() - from_coord.get_x(), to_coord.get_y() - from_coord.get_y()
+        )
         new_map = Map(new_size)
         for x in range(from_coord.get_x(), to_coord.get_x() + 1):
             for y in range(from_coord.get_y(), to_coord.get_y() + 1):
                 obj = self.get(Coordinate(x, y))
                 if obj is not None:
-                    new_map.__force_add(obj, Coordinate(x - from_coord.get_x(), y - from_coord.get_y()))
+                    new_map.__force_add(
+                        obj, Coordinate(x - from_coord.get_x(), y - from_coord.get_y())
+                    )
         return new_map
-    
-    def get_map_from_to(self, from_coord: Coordinate, to_coord: Coordinate) -> defaultdict[Coordinate, GameObject]:
+
+    def get_map_from_to(
+        self, from_coord: Coordinate, to_coord: Coordinate
+    ) -> defaultdict[Coordinate, GameObject]:
         """
         Get the map from a certain coordinate to another as a matrix.
 
@@ -216,8 +248,10 @@ class Map():
                 if obj is not None:
                     result[Coordinate(x, y)] = obj
         return result
-    
-    def get_map_list_from_to(self, from_coord: Coordinate, to_coord: Coordinate) -> list[list[GameObject]]:
+
+    def get_map_list_from_to(
+        self, from_coord: Coordinate, to_coord: Coordinate
+    ) -> list[list[GameObject]]:
         """
         Get the map as a list of lists from a certain coordinate to another.
 
@@ -234,7 +268,7 @@ class Map():
             for y in range(from_coord.get_y(), to_coord.get_y() + 1):
                 result[x][y] = self.get(Coordinate(x, y))
         return result
-    
+
     def tabler_str(self) -> str:
         """
         Get the string representation of the map in tabler format.
@@ -245,7 +279,7 @@ class Map():
         horizontal_line = lambda length: "┌" + "┬".join(["─" * 3] * length) + "┐"
         middle_line = lambda length: "├" + "┼".join(["─" * 3] * length) + "┤"
         bottom_line = lambda length: "└" + "┴".join(["─" * 3] * length) + "┘"
-        
+
         rows = [horizontal_line(self.get_size())]
         for y in range(self.get_size()):
             row = []
@@ -257,7 +291,7 @@ class Map():
                 rows.append(middle_line(self.get_size()))
         rows.append(bottom_line(self.get_size()))
         return "\n".join(rows)
-    
+
     def __str__(self) -> str:
         """
         Get the string representation of the map.
@@ -270,10 +304,10 @@ class Map():
             row = []
             for x in range(self.get_size()):
                 obj = self.get(Coordinate(x, y))
-                row.append(obj.get_letter() if obj else '·')
+                row.append(obj.get_letter() if obj else "·")
             rows.append("".join(row))
         return "\n".join(rows)
-    
+
     def __repr__(self) -> str:
         """
         Get the string representation of the map for testing purposes.
@@ -286,14 +320,14 @@ class Map():
             row = []
             for x in range(self.get_size()):
                 obj = self.get(Coordinate(x, y))
-                row.append(obj.get_letter() if obj else '·')
+                row.append(obj.get_letter() if obj else "·")
             rows.append("".join(row))
         return "\n".join(rows)
-    
+
     def path_finding(self, start: Coordinate, end: Coordinate) -> list[Coordinate]:
         """
         Find the path for a unit to go from start to end.
-        
+
         :param start: The starting coordinate.
         :type start: Coordinate
         :param end: The ending coordinate.
@@ -301,16 +335,34 @@ class Map():
         :return: A list of coordinates representing the path from start to end.
         :rtype: list[Coordinate]
         """
-        m=[[1 if self.get(Coordinate(x, y)) is None or Coordinate(x,y) == start or Coordinate(x,y) == end else 0 for x in range(self.get_size())] for y in range(self.get_size())]
+        m = [
+            [
+                (
+                    1
+                    if self.get(Coordinate(x, y)) is None
+                    or Coordinate(x, y) == start
+                    or Coordinate(x, y) == end
+                    else 0
+                )
+                for x in range(self.get_size())
+            ]
+            for y in range(self.get_size())
+        ]
         grid = Grid(matrix=m)
         start_node = grid.node(start.get_x(), start.get_y())
         end_node = grid.node(end.get_x(), end.get_y())
         finder = AStarFinder(diagonal_movement=DiagonalMovement.always)
         path, _ = finder.find_path(start_node, end_node, grid)
-        
+
         return [Coordinate(x, y) for x, y in path[1:]]
-    
-    def path_finding_avoid(self, start: Coordinate, end: Coordinate, avoid_from: Coordinate, avoid_to: Coordinate) -> list[Coordinate]:
+
+    def path_finding_avoid(
+        self,
+        start: Coordinate,
+        end: Coordinate,
+        avoid_from: Coordinate,
+        avoid_to: Coordinate,
+    ) -> list[Coordinate]:
         """
         Find the path for a unit to go from start to end while avoiding a specific area.
 
@@ -325,8 +377,20 @@ class Map():
         :return: A list of coordinates representing the path from start to end while avoiding the specified area.
         :rtype: list[Coordinate]
         """
-        
-        matrix=[[1 if self.get(Coordinate(x, y)) is None or Coordinate(x,y) == start or Coordinate(x,y) == end else 0 for x in range(self.get_size())] for y in range(self.get_size())]
+
+        matrix = [
+            [
+                (
+                    1
+                    if self.get(Coordinate(x, y)) is None
+                    or Coordinate(x, y) == start
+                    or Coordinate(x, y) == end
+                    else 0
+                )
+                for x in range(self.get_size())
+            ]
+            for y in range(self.get_size())
+        ]
 
         # Mark the avoid area as non-walkable
         for x in range(avoid_from.get_x(), avoid_to.get_x() + 1):
@@ -342,8 +406,10 @@ class Map():
         path, _ = finder.find_path(start_node, end_node, grid)
 
         return [Coordinate(x, y) for x, y in path[1:]]
-    
-    def path_finding_non_diagonal(self, start: Coordinate, end: Coordinate) -> list[Coordinate]:
+
+    def path_finding_non_diagonal(
+        self, start: Coordinate, end: Coordinate
+    ) -> list[Coordinate]:
         """
         Find the path for a unit to go from start to end without diagonal movement.
 
@@ -354,15 +420,30 @@ class Map():
         :return: A list of coordinates representing the path from start to end without diagonal movement.
         :rtype: list[Coordinate]
         """
-        m=[[1 if self.get(Coordinate(x, y)) is None or Coordinate(x,y) == start or Coordinate(x,y) == end else 0 for x in range(self.get_size())] for y in range(self.get_size())]
+        m = [
+            [
+                (
+                    1
+                    if self.get(Coordinate(x, y)) is None
+                    or Coordinate(x, y) == start
+                    or Coordinate(x, y) == end
+                    else 0
+                )
+                for x in range(self.get_size())
+            ]
+            for y in range(self.get_size())
+        ]
         grid = Grid(matrix=m)
         start_node = grid.node(start.get_x(), start.get_y())
         end_node = grid.node(end.get_x(), end.get_y())
         finder = AStarFinder(diagonal_movement=DiagonalMovement.never)
         path, _ = finder.find_path(start_node, end_node, grid)
-        
+
         return [Coordinate(x, y) for x, y in path[1:]]
-    def find_nearest_empty_zones(self, coordinate: Coordinate, size: int) -> list[Coordinate]:
+
+    def find_nearest_empty_zones(
+        self, coordinate: Coordinate, size: int
+    ) -> list[Coordinate]:
         """
         Find the nearest empty zone to a given coordinate.
 
@@ -377,34 +458,48 @@ class Map():
         zone_list = []
         radius = 1
         size += 1
-        size_checker = GameObject("", "",1)
+        size_checker = GameObject("", "", 1)
         size_checker.set_size(size)
         while radius < map.get_size():
-            for x in range(coordinate.get_x() - radius, coordinate.get_x() + radius + 1):
-                if map.check_placement(size_checker, Coordinate(x, coordinate.get_y() - radius)):
-                    current = Coordinate(x,coordinate.get_y() - radius)
-                    zone_list.append(current+1)
+            for x in range(
+                coordinate.get_x() - radius, coordinate.get_x() + radius + 1
+            ):
+                if map.check_placement(
+                    size_checker, Coordinate(x, coordinate.get_y() - radius)
+                ):
+                    current = Coordinate(x, coordinate.get_y() - radius)
+                    zone_list.append(current + 1)
                     map.add(size_checker, current)
-                if map.check_placement(size_checker, Coordinate(x, coordinate.get_y() + radius)):
+                if map.check_placement(
+                    size_checker, Coordinate(x, coordinate.get_y() + radius)
+                ):
                     current = Coordinate(x, coordinate.get_y() + radius)
-                    zone_list.append(current+1)
-                    map.add(size_checker,current)
-            
-            for y in range(coordinate.get_y() - radius, coordinate.get_y() + radius + 1):
-                if map.check_placement(size_checker, Coordinate(coordinate.get_x() - radius, y)):
+                    zone_list.append(current + 1)
+                    map.add(size_checker, current)
+
+            for y in range(
+                coordinate.get_y() - radius, coordinate.get_y() + radius + 1
+            ):
+                if map.check_placement(
+                    size_checker, Coordinate(coordinate.get_x() - radius, y)
+                ):
                     current = Coordinate(coordinate.get_x() - radius, y)
-                    zone_list.append(current+1)
-                    map.add(size_checker,current)
-                if map.check_placement(size_checker, Coordinate(coordinate.get_x() + radius, y)):
+                    zone_list.append(current + 1)
+                    map.add(size_checker, current)
+                if map.check_placement(
+                    size_checker, Coordinate(coordinate.get_x() + radius, y)
+                ):
                     current = Coordinate(coordinate.get_x() + radius, y)
-                    zone_list.append(current+1)
+                    zone_list.append(current + 1)
                     map.add(size_checker, current)
             radius += 1
-            if size ==2 and len(zone_list) > 0:
+            if size == 2 and len(zone_list) > 0:
                 break
         return zone_list
-    
-    def find_nearest_objects(self, coordinate: Coordinate, object_type: type) -> list[Coordinate]:
+
+    def find_nearest_objects(
+        self, coordinate: Coordinate, object_type: type
+    ) -> list[Coordinate]:
         """
         Find the nearest object of the same type to a given coordinate.
 
@@ -430,12 +525,18 @@ class Map():
                 list_of_objects.append(current)
             for dx, dy in Map.DIRECTIONS:
                 neighbor = Coordinate(current.get_x() + dx, current.get_y() + dy)
-                if Coordinate(0,0) <= neighbor <= Coordinate(self.get_size() - 1, self.get_size() - 1):
+                if (
+                    Coordinate(0, 0)
+                    <= neighbor
+                    <= Coordinate(self.get_size() - 1, self.get_size() - 1)
+                ):
                     queue.append(neighbor)
 
         return list_of_objects
-    
-    def find_nearest_enemies(self, coordinate: Coordinate, player: 'Player') -> list[Coordinate]:
+
+    def find_nearest_enemies(
+        self, coordinate: Coordinate, player: "Player"
+    ) -> list[Coordinate]:
         """
         Find the nearest enemies to a given coordinate.
 
@@ -446,10 +547,14 @@ class Map():
         :return: A list of coordinates of the nearest enemies.
         :rtype: list[Coordinate]
         """
-        list_of_enemies_coordinate = [coord for coord in self.find_nearest_objects(coordinate, Entity) if self.get(coord).get_player() == player]
+        list_of_enemies_coordinate = [
+            coord
+            for coord in self.find_nearest_objects(coordinate, Entity)
+            if self.get(coord).get_player() == player
+        ]
         return list_of_enemies_coordinate
-    
-    def capture(self) -> 'Map':
+
+    def capture(self) -> "Map":
         """
         Copy the map.
 
@@ -459,7 +564,7 @@ class Map():
         new_map = Map(self.__size)
         new_map.__matrix = self.__matrix.copy()
         return new_map
-    
+
     def indicate_color(self, coordinate: Coordinate) -> str:
         """
         Get the color of the object coordinate.
@@ -475,14 +580,16 @@ class Map():
         if isinstance(object, Entity):
             return object.get_player().get_color()
         return "white"
-    
+
     def __getstate__(self):
         # Méthode spéciale pour la sérialisation
         state = self.__dict__.copy()
-        state['_Map__matrix'] = dict(self.__matrix)  # Convertir defaultdict en dict pour la sérialisation
+        state["_Map__matrix"] = dict(
+            self.__matrix
+        )  # Convertir defaultdict en dict pour la sérialisation
         return state
 
     def __setstate__(self, state):
         # Méthode spéciale pour la désérialisation
         self.__dict__.update(state)
-        self.__matrix = defaultdict(lambda: None, state['_Map__matrix'])
+        self.__matrix = defaultdict(lambda: None, state["_Map__matrix"])

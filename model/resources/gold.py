@@ -1,5 +1,6 @@
 from model.resources.resource import Resource
 
+
 class Gold(Resource):
     """This class represents the Gold resource"""
     

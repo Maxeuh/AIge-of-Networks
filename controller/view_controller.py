@@ -1,27 +1,34 @@
+import json
+import os
+import typing
+import webbrowser
+
 import pygame
+
+from model.units.villager import Villager
+from util.coordinate import Coordinate
 from util.map import Map
 from util.settings import Settings
 from view.base_view import BaseView
-from view.view_2_5D import View2_5D
 from view.terminal_view import TerminalView
-from model.units.villager import Villager
-import os, json, typing, webbrowser
+from view.view_2_5D import View2_5D
+
 if typing.TYPE_CHECKING:
     from controller.game_controller import GameController
-import threading
+
 
 class ViewController:
-    def __init__(self, game_controller: 'GameController') -> None:
+    def __init__(self, game_controller: "GameController") -> None:
         """Initialize the view controller."""
         self.__is_terminal: bool = True
-        self.__game_controller: 'GameController' = game_controller
+        self.__game_controller: "GameController" = game_controller
         self.__current_view: BaseView = TerminalView(self)
         self.__pause: bool = False
         self.__speed = 1  # Initialize speed
-    
+
     def toggle_speed(self) -> None:
         """Toggle the speed between 1 and 60."""
-        self.__speed = 5 if self.__speed == 1 else 1
+        self.__speed = 10 if self.__speed == 1 else 1
 
     def get_speed(self) -> int:
         """Get the current speed."""
@@ -53,7 +60,7 @@ class ViewController:
         """Bascule entre la vue terminale et la vue 2.5D en appuyant sur F12."""
         if self.__is_terminal:
             self.__is_terminal = False
-            pygame.init() # Ajout de l'initialisation pour éviter l'erreur
+            pygame.init()  # Ajout de l'initialisation pour éviter l'erreur
             self.__current_view = View2_5D(self)
         else:
             self.__is_terminal = True
@@ -71,7 +78,8 @@ class ViewController:
             "name": player.get_name(),
             "color": player.get_color(),
             "resources": {
-                type(resource).__name__: amount for resource, amount in player.get_resources().items()
+                type(resource).__name__: amount
+                for resource, amount in player.get_resources().items()
             },
             "units": [
                 {
@@ -79,15 +87,28 @@ class ViewController:
                     "hp": unit.get_hp(),
                     "attack_per_second": unit.get_attack_per_second(),
                     "speed": unit.get_speed(),
-
                     # Include inventory if the unit has one (e.g., Villager)
-                    "inventory": {
-                        type(resource).__name__: amount
-                        for resource, amount in getattr(unit, "_Villager__inventory", {}).items()
-                    } if isinstance(unit, Villager) else None,
-                    "inventory_size": getattr(unit, "_Villager__inventory_size", None) if isinstance(unit, Villager) else None,
-                    "collect_time_per_minute": getattr(unit, "_Villager__collect_time_per_minute", None) if isinstance(unit, Villager) else None,
-                    "task" : str(unit.get_task())
+                    "inventory": (
+                        {
+                            type(resource).__name__: amount
+                            for resource, amount in getattr(
+                                unit, "_Villager__inventory", {}
+                            ).items()
+                        }
+                        if isinstance(unit, Villager)
+                        else None
+                    ),
+                    "inventory_size": (
+                        getattr(unit, "_Villager__inventory_size", None)
+                        if isinstance(unit, Villager)
+                        else None
+                    ),
+                    "collect_time_per_minute": (
+                        getattr(unit, "_Villager__collect_time_per_minute", None)
+                        if isinstance(unit, Villager)
+                        else None
+                    ),
+                    "task": str(unit.get_task()),
                 }
                 for unit in player.get_units()
             ],
@@ -97,9 +118,10 @@ class ViewController:
                     "hp": building.get_hp(),
                     "size": building.get_size(),
                     "cost": {
-                        type(resource).__name__: amount for resource, amount in building.get_cost().items()
+                        type(resource).__name__: amount
+                        for resource, amount in building.get_cost().items()
                     },
-                    "building" : str(building.get_task())
+                    "building": str(building.get_task()),
                 }
                 for building in player.get_buildings()
             ],
@@ -120,50 +142,79 @@ class ViewController:
         <head>
             <title>Game Stats</title>
             <style>
-                body {{ font-family: Arial, sans-serif; margin: 20px; }}
-                .collapsible {{
-                    cursor: pointer;
-                    padding: 10px;
-                    background: #007bff;
-                    color: white;
-                    border: none;
-                    border-radius: 5px;
-                    text-align: left;
-                    margin-bottom: 5px;
-                }}
-                .content {{
-                    padding: 10px;
-                    display: none;
-                    background-color: #f9f9f9;
-                    border: 1px solid #ccc;
-                    border-radius: 5px;
-                    margin-bottom: 10px;
-                }}
-                pre {{
-                    background: #f4f4f4;
-                    padding: 10px;
-                    border-radius: 5px;
-                }}
+            body {{ font-family: Arial, sans-serif; margin: 20px; }}
+            .collapsible {{
+            cursor: pointer;
+            padding: 10px;
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            text-align: left;
+            margin-bottom: 5px;
+            }}
+            .content {{
+            padding: 10px;
+            display: none;
+            background-color: #f9f9f9;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            margin-bottom: 10px;
+            }}
+            pre {{
+            background: #f4f4f4;
+            padding: 10px;
+            border-radius: 5px;
+            }}
+            table {{
+            width: 100%;
+            border-collapse: collapse;
+            }}
+            th, td {{
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: center;
+            }}
+            th {{
+            background-color: #f2f2f2;
+            }}
             </style>
             <script>
-                function toggleContent(id) {{
-                    var content = document.getElementById(id);
-                    content.style.display = content.style.display === "block" ? "none" : "block";
-                }}
+            function toggleContent(id) {{
+            var content = document.getElementById(id);
+            content.style.display = content.style.display === "block" ? "none" : "block";
+            }}
             </script>
         </head>
         <body>
             <h1>Game Stats</h1>
-            
-            <h2>Map</h2>
-            <p>Size: {self.get_map().get_size()}</p>
-
+            <h2>Players</h2>
+            {self.generate_collapsible_html(all_players_stats)}
             <h2>Settings</h2>
             <p>Map Size: {self.get_settings().map_size.value}</p>
             <p>Map Type: {self.get_settings().map_type}</p>
-            <h2>Players</h2>
-            {self.generate_collapsible_html(all_players_stats)}
-            <p>Task: {[unit.get_task() for unit in self.__game_controller.get_players()[0].get_units()]}</p>
+            <p>FPS: {self.get_settings().fps}</p>
+            <p>Starting Condition: {self.get_settings().starting_condition}</p>
+            <h2>Map</h2>
+            <button class="collapsible" onclick="toggleContent('map')">Show/Hide Map</button>
+            <div id="map" class="content">
+            <table>
+            <tr>
+            <th></th>
+            {"".join(f"<th>{col}</th>" for col in range(self.get_map().get_size()))}
+            <th></th>
+            </tr>
+            {"".join(
+            f"<tr><th>{row}</th>{''.join(f'<td>{self.get_map().get_map()[Coordinate(row, col)].get_letter() if self.get_map().get_map()[Coordinate(row, col)] else ''}</td>' for col in range(self.get_map().get_size()))}<th>{row}</th></tr>"
+            for row in range(self.get_map().get_size())
+            )}
+            <tr>
+            <th></th>
+            {"".join(f"<th>{col}</th>" for col in range(self.get_map().get_size()))}
+            <th></th>
+            </tr>
+            </table>
+            </div>
         </body>
         </html>
         """
@@ -216,4 +267,3 @@ class ViewController:
             </div>
             """
         return html
-

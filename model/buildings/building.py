@@ -1,12 +1,23 @@
-from model.entity import Entity
 import typing
+
+from model.entity import Entity
+
 if typing.TYPE_CHECKING:
     from model.resources.resource import Resource
+
 
 class Building(Entity):
     """This class represents the buildings on the map."""
 
-    def __init__(self, name: str, letter: str, hp: int, cost: dict['Resource', int], size: int, spawning_time: int):
+    def __init__(
+        self,
+        name: str,
+        letter: str,
+        hp: int,
+        cost: dict["Resource", int],
+        size: int,
+        spawning_time: int,
+    ):
         """
         Initializes the building.
         :param name: The name of the building.
@@ -35,7 +46,7 @@ class Building(Entity):
         :rtype: bool
         """
         return self.__resources_drop_point
-    
+
     def set_resources_drop_point(self, resources_drop_point: bool) -> None:
         """
         Sets whether or not the building is a resources drop point.
@@ -43,7 +54,7 @@ class Building(Entity):
         :type resources_drop_point: bool
         """
         self.__resources_drop_point = resources_drop_point
-    
+
     def is_population_increase(self) -> bool:
         """
         Returns whether or not the building increases the population.
@@ -51,7 +62,7 @@ class Building(Entity):
         :rtype: bool
         """
         return self.__population_increase
-    
+
     def set_population_increase(self, population_increase: bool) -> None:
         """
         Sets whether or not the building increases the population.
@@ -59,4 +70,3 @@ class Building(Entity):
         :type population_increase: bool
         """
         self.__population_increase = population_increase
-    

@@ -1,5 +1,6 @@
 from enum import Enum
 
+
 class MapType(Enum):
     """
     Enum representing the different types of maps that can be generated.
@@ -10,9 +11,11 @@ class MapType(Enum):
     :cvar GOLD_CENTER: Represents the map type with all the gold at the centre of the map.
     :cvar TEST: Represents the map type for testing purposes.
     """
+
     RICH = 1
     GOLD_CENTER = 2
     TEST = 9
+
 
 class MapSize(Enum):
     """
@@ -22,9 +25,11 @@ class MapSize(Enum):
 
     :cvar SMALL: Represents the small map size of 120x120.
     """
+
     SMALL = 120
     MEDIUM = 240
     LARGE = 480
+
 
 class StartingCondition(Enum):
     """
@@ -42,9 +47,11 @@ class StartingCondition(Enum):
         - 20000(F,W,G)
         - 3 Town Centres, 15 Villagers, 2 (Barracks, Stable, Archery Range)
     """
+
     LEAN = 0
     MEAN = 1
     # MARINES = 2
+
 
 class GameState(Enum):
     """
@@ -57,10 +64,12 @@ class GameState(Enum):
     :cvar PAUSED: The game is currently paused.
     :cvar GAME_OVER: The game has ended.
     """
+
     NOT_STARTED = 0
     PLAYING = 1
     PAUSED = 2
     GAME_OVER = 3
+
 
 class FPS(Enum):
     """
@@ -72,9 +81,11 @@ class FPS(Enum):
     :cvar FPS_30: Represents the option for 30 frames per second.
     :cvar FPS_60: Represents the option for 60 frames per second.
     """
+
     FPS_15 = 15
     FPS_30 = 30
     FPS_60 = 60
+
 
 class MenuOptions(Enum):
     """
@@ -90,6 +101,7 @@ class MenuOptions(Enum):
     :cvar LOAD_GAME: Represents the option to load a previously saved game.
     :cvar SAVE_GAME: Represents the option to save the current game.
     """
+
     EXIT = 0
     SETTINGS = 1
     START_GAME = 2
@@ -97,3 +109,14 @@ class MenuOptions(Enum):
     RESTART = 4
     LOAD_GAME = 5
     SAVE_GAME = 6
+
+
+class Process(Enum):
+    """This class is responsible for storing the processes that can be executed."""
+
+    SPAWN = 0
+    MOVE = 1
+    ATTACK = 2
+    COLLECT = 3
+    DROP = 4
+    BUILD = 5

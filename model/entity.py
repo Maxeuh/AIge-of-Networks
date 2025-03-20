@@ -1,9 +1,11 @@
+import typing
+
 from model.game_object import GameObject
 from model.resources.resource import Resource
-import typing
+
 if typing.TYPE_CHECKING:
+    from model.commands.command import Task
     from model.player.player import Player
-    from controller.command import Task
 
 class Entity(GameObject):
     """This class represents the entities (Units and Buildings) on the map."""
