@@ -66,8 +66,6 @@ python main.py
 
 ## Team Presentation
 
-Group 6:
-
 - [BEN BELGACEM Yassine](https://github.com/Yassinebelga)
 - [HAJ BELGACEM Bechir](https://github.com/bechir277)
 - [KRILL Maxence](https://github.com/Maxeuh)
