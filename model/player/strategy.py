@@ -60,7 +60,7 @@ class Strategy1(Strategy):
   
     def execute(self): ## run every AI-loop
         if not self.get_ai().get_enemies():
-            self.random_actions
+            self.random_actions()
         else:
             self.analyse()
             if self.__mode == self.DEFEND:
@@ -70,7 +70,7 @@ class Strategy1(Strategy):
 
     def analyse(self):
         if not self.get_ai().get_enemies():
-            self.random_actions
+            self.random_actions()
         else:
         
             self.__target_player: Player = self.find_target_player()
@@ -82,7 +82,7 @@ class Strategy1(Strategy):
 
     def find_target_player(self):
         if not self.get_ai().get_enemies():
-            self.random_actions
+            self.random_actions()
         else:
             ai: 'AI' = self.get_ai()
             player: Player = ai.get_player()
@@ -99,7 +99,7 @@ class Strategy1(Strategy):
 
     def defend(self):
         if not self.get_ai().get_enemies():
-            self.random_actions
+            self.random_actions()
         else:
             
             villagers = [u for u in self.get_ai().get_player().get_units() if isinstance(u, Villager) and u.get_task() is None]
@@ -128,7 +128,7 @@ class Strategy1(Strategy):
 
     def attack(self):
         if not self.get_ai().get_enemies():
-            self.random_actions
+            self.random_actions()
         else:
             
             villagers = [u for u in self.get_ai().get_player().get_units() if isinstance(u, Villager) and u.get_task() is None]
@@ -155,9 +155,7 @@ class Strategy1(Strategy):
             self.spawnAll(Barracks)
 
     def collect(self, villager: Villager, collect_point: Coordinate):
-        if not self.get_ai().get_enemies():
-            self.random_actions
-        else:
+
             
             u = villager
             drop_point = next(( drop_coord for drop_coord in self.get_ai().get_map_known().find_nearest_objects(u.get_coordinate(), Building) if self.get_ai().get_map_known().get(drop_coord).is_resources_drop_point() and self.get_ai().get_map_known().get(drop_coord).get_player() == self.get_ai().get_player() ), None)
@@ -166,29 +164,25 @@ class Strategy1(Strategy):
                 u.set_task(CollectAndDropTask(self.get_ai().get_player().get_command_manager(), u, collect_point, drop_point))
     
     def build(self, building: Building, villager: Villager, build_point: Coordinate):
-        if not self.get_ai().get_enemies():
-            self.random_actions
-        else:
+
             task =BuildTask(self.get_ai().get_player().get_command_manager(), villager, build_point, building)
             villager.set_task(task)
 
     def spawn(self, building: Building):
-        if not self.get_ai().get_enemies():
-            self.random_actions
-        else:
+
                 task = SpawnTask(self.get_ai().get_player().get_command_manager(), building)
                 building.set_task(task)
     
     def kill(self,unit: Unit, target_coord: Coordinate):
         if not self.get_ai().get_enemies():
-            self.random_actions
+            self.random_actions()
         else:
             task = KillTask(self.get_ai().get_player().get_command_manager(), unit, target_coord)
             unit.set_task(task)
 
     def dispatchAttackers(self, object_type: type)->None:
         if not self.get_ai().get_enemies():
-            self.random_actions
+            self.random_actions()
         else:
             units = [u for u in self.get_ai().get_player().get_units() if isinstance(u, object_type) and u.get_task() is None]
             targets = self.get_ai().get_map_known().find_nearest_enemies(self.get_ai().get_player().get_centre_coordinate(), self.__target_player)
@@ -199,9 +193,7 @@ class Strategy1(Strategy):
                     self.kill(unit, targets[0])
     
     def spawnAll(self, object_type: type):
-        if not self.get_ai().get_enemies():
-            self.random_actions
-        else:
+
             buildings = [b for b in self.get_ai().get_player().get_buildings() if isinstance(b, object_type) and b.get_task() is None]
             unit = UnitSpawner()[object_type().get_name()]
             for building in buildings:
@@ -252,3 +244,4 @@ class Strategy1(Strategy):
             random_coord = Coordinate(random_x, random_y)
             task = MoveTask(self.get_ai().get_player().get_command_manager(), unit, random_coord)
             unit.set_task(task)
+         
