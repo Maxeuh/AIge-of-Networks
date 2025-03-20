@@ -9,7 +9,13 @@ class Task(ABC):
     """
     This class is responsible for executing tasks.
     """
-    def __init__(self,command_manager: CommandController,  entity: Entity, target_coord: Coordinate) -> None:
+
+    def __init__(
+        self,
+        command_manager: CommandController,
+        entity: Entity,
+        target_coord: Coordinate,
+    ) -> None:
         """
         Initializes the task with the given command_manager, entity and target_coord.
         :param command_manager: The command manager of the player that will execute the task.
@@ -21,7 +27,7 @@ class Task(ABC):
         """
         self.__entity: Entity = entity
         self.__target_coord: Coordinate = target_coord
-        self.__command_manager : CommandController = command_manager
+        self.__command_manager: CommandController = command_manager
         self.__waiting: bool = False
         self.__name: str = ""
 
@@ -33,6 +39,7 @@ class Task(ABC):
         :rtype: str
         """
         return self.__name
+
     def __repr__(self):
         return f"{self.get_name()}. Target {self.__target_coord}"
 
@@ -51,7 +58,7 @@ class Task(ABC):
         :rtype: CommandController
         """
         return self.__command_manager
-    
+
     def get_entity(self) -> Entity:
         """
         Returns the entity that will execute the task.
@@ -59,7 +66,7 @@ class Task(ABC):
         :rtype: Entity
         """
         return self.__entity
-    
+
     def get_target_coord(self) -> Coordinate:
         """
         Returns the target coordinate where the entity will execute the task.
@@ -67,7 +74,7 @@ class Task(ABC):
         :rtype: Coordinate
         """
         return self.__target_coord
-    
+
     def get_waiting(self) -> bool:
         """
         Returns whether the task is waiting or not.
@@ -75,7 +82,7 @@ class Task(ABC):
         :rtype: bool
         """
         return self.__waiting
-    
+
     def set_waiting(self, waiting: bool) -> None:
         """
         Sets whether the task is waiting or not.

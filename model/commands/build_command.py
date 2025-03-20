@@ -5,6 +5,10 @@ from model.player.player import Player
 from model.units.villager import Villager
 from util.coordinate import Coordinate
 from util.map import Map
+import typing
+
+if typing.TYPE_CHECKING:
+    from controller.network_controller import NetworkController
 
 
 class BuildCommand(Command):
@@ -15,6 +19,7 @@ class BuildCommand(Command):
         game_map: Map,
         player: Player,
         unit: Villager,
+        network_controller: "NetworkController",
         building: Building,
         target_coord: Coordinate,
         convert_coeff: int,
@@ -35,7 +40,9 @@ class BuildCommand(Command):
         :param convert_coeff: The coefficient used to convert time to tick.
         :type convert_coeff: int
         """
-        super().__init__(game_map, player, unit, Process.BUILD, convert_coeff)
+        super().__init__(
+            game_map, player, unit, network_controller, Process.BUILD, convert_coeff
+        )
         self.set_time(building.get_spawning_time())
         self.set_tick(int(self.get_time() * convert_coeff))
         self.__building = building
@@ -69,6 +76,7 @@ class BuildCommand(Command):
             self.get_interactions().place_object(
                 self.__place_holder, self.__target_coord
             )
+            self.send_network()
 
         if self.get_tick() <= 0:
             if self in self.__command_list:
@@ -76,6 +84,7 @@ class BuildCommand(Command):
                 self.get_interactions().place_object(
                     self.__building, self.__target_coord
                 )
+                self.send_network()
                 self.get_interactions().link_owner(self.get_player(), self.__building)
                 if self.__building.is_population_increase():
                     self.get_player().set_max_population(

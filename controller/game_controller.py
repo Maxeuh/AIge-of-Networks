@@ -6,6 +6,7 @@ from pygame import time
 
 from controller.ai_controller import AIController
 from controller.command_controller import CommandController
+from controller.network_controller import NetworkController
 from model.interactions import Interactions
 from controller.task_manager import TaskController
 from controller.view_controller import ViewController
@@ -46,15 +47,16 @@ class GameController:
         :param menu_controller: The menu controller.
         :type menu_controller: MenuController
         """
+        self.__network_controller: NetworkController = NetworkController()
+        self.__menu_controller: "MenuController" = menu_controller
+        self.settings: Settings = self.__menu_controller.settings
+        self.__command_list: list[Command] = []
+        self.__players: list[Player] = []
+        self.__map: Map = self.__generate_map()
+        self.__ai_controller: AIController = AIController(self, 1)
+        self.__assign_AI()
+        self.__running: bool = False
         if not load:
-            self.__menu_controller: "MenuController" = menu_controller
-            self.settings: Settings = self.__menu_controller.settings
-            self.__command_list: list[Command] = []
-            self.__players: list[Player] = []
-            self.__map: Map = self.__generate_map()
-            self.__ai_controller: AIController = AIController(self, 1)
-            self.__assign_AI()
-            self.__running: bool = False
             self.__game_thread = threading.Thread(target=self.game_loop)
             self.__ai_thread = threading.Thread(target=self.__ai_controller.ai_loop)
             self.__view_controller: ViewController = ViewController(self)
@@ -62,17 +64,9 @@ class GameController:
             self.__ai_thread.start()
             self.__view_controller.start_view()
         else:
-            self.__menu_controller: "MenuController" = menu_controller
-            self.settings: Settings = self.__menu_controller.settings
-            self.__command_list: list[Command] = []
-            self.__players: list[Player] = []
-            self.__map: Map = self.__generate_map()
-            self.__ai_controller: AIController = AIController(self, 1)
-            self.__assign_AI()
-            self.__running: bool = False
+            self.__game_thread = None
             self.__ai_thread = None
             self.__view_controller = None
-            self.__game_thread = None
 
     def start_all_threads(self):
         self.__game_thread = threading.Thread(target=self.game_loop())
@@ -95,7 +89,11 @@ class GameController:
             self.get_players().append(player)
             player.set_command_manager(
                 CommandController(
-                    game_map, player, self.settings.fps.value, self.__command_list
+                    game_map,
+                    player,
+                    self.settings.fps.value,
+                    self.__command_list,
+                    self.__network_controller,
                 )
             )
             player.set_task_manager(TaskController(player.get_command_manager()))
@@ -379,6 +377,8 @@ class GameController:
         self.__running = False
         self.__ai_controller.exit()
         self.__menu_controller.exit()
+        self.__network_controller.send("EXIT")
+        self.__network_controller.close()
 
     def get_speed(self) -> int:
         """Get the current speed."""
@@ -463,3 +463,11 @@ class GameController:
             self.__ai_thread = threading.Thread(target=self.__ai_controller.ai_loop)
 
         self.__view_controller.start_view()
+
+    def get_network_controller(self) -> NetworkController:
+        """
+        Returns the network controller.
+        :return: The network controller.
+        :rtype: NetworkController
+        """
+        return self.__network_controller

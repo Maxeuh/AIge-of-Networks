@@ -12,6 +12,11 @@ from util.coordinate import Coordinate
 from util.map import Map
 from util.state_manager import Process
 
+import typing
+
+if typing.TYPE_CHECKING:
+    from controller.network_controller import NetworkController
+
 
 class CommandController:
     """This class is responsible for managing commands of a single player, using the same list of commands for all players."""
@@ -22,6 +27,7 @@ class CommandController:
         player: Player,
         convert_coeff: int,
         command_list: list[Command],
+        network_controller: "NetworkController",
     ) -> None:
         """
         Initializes the CommandController with the given map, player and convert_coeff.
@@ -36,6 +42,7 @@ class CommandController:
         self.__player: Player = player
         self.__convert_coeff: int = convert_coeff
         self.__command_list: list[Command] = command_list
+        self.__network_controller: "NetworkController" = network_controller
 
     def get_map(self):
         """
@@ -74,57 +81,34 @@ class CommandController:
         :param building: The building that will be built. It is only used when the process is Process.BUILD, otherwise it is None.
         :type building: Building
         """
-        if process == Process.SPAWN:
-            return SpawnCommand(
+
+        command_classes = {
+            Process.SPAWN: SpawnCommand,
+            Process.MOVE: MoveCommand,
+            Process.ATTACK: AttackCommand,
+            Process.COLLECT: CollectCommand,
+            Process.DROP: DropCommand,
+            Process.BUILD: BuildCommand,
+        }
+
+        command_class = command_classes.get(process)
+        if command_class:
+            if process == Process.BUILD:
+                return command_class(
+                    self.__map,
+                    self.__player,
+                    entity,
+                    self.__network_controller,
+                    building,
+                    target_coord,
+                    self.__convert_coeff,
+                    self.__command_list,
+                )
+            return command_class(
                 self.__map,
                 self.__player,
                 entity,
-                target_coord,
-                self.__convert_coeff,
-                self.__command_list,
-            )
-        elif process == Process.MOVE:
-            return MoveCommand(
-                self.__map,
-                self.__player,
-                entity,
-                target_coord,
-                self.__convert_coeff,
-                self.__command_list,
-            )
-        elif process == Process.ATTACK:
-            return AttackCommand(
-                self.__map,
-                self.__player,
-                entity,
-                target_coord,
-                self.__convert_coeff,
-                self.__command_list,
-            )
-        elif process == Process.COLLECT:
-            return CollectCommand(
-                self.__map,
-                self.__player,
-                entity,
-                target_coord,
-                self.__convert_coeff,
-                self.__command_list,
-            )
-        elif process == Process.DROP:
-            return DropCommand(
-                self.__map,
-                self.__player,
-                entity,
-                target_coord,
-                self.__convert_coeff,
-                self.__command_list,
-            )
-        elif process == Process.BUILD:
-            return BuildCommand(
-                self.__map,
-                self.__player,
-                entity,
-                building,
+                self.__network_controller,
                 target_coord,
                 self.__convert_coeff,
                 self.__command_list,

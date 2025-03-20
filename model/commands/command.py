@@ -5,6 +5,10 @@ from model.entity import Entity
 from model.player.player import Player
 from util.map import Map
 from util.state_manager import Process
+import typing
+
+if typing.TYPE_CHECKING:
+    from controller.network_controller import NetworkController
 
 
 class Command(ABC):
@@ -15,6 +19,7 @@ class Command(ABC):
         game_map: Map,
         player: Player,
         entity: Entity,
+        network_controller: "NetworkController",
         process: Process,
         convert_coeff: int,
     ) -> None:
@@ -36,6 +41,7 @@ class Command(ABC):
         self.__process: Process = process
         self.__player: Player = player
         self.__entity: Entity = entity
+        self.__network_controller: "NetworkController" = network_controller
         self.__convert_coeff: int = convert_coeff
         self.__time: float = 0
         self.__tick: int = 0
@@ -153,3 +159,11 @@ class Command(ABC):
 
     def __repr__(self):
         return f"{self.get_entity()} of {self.get_player()} at {self.get_entity().get_coordinate()} doing {self.get_process()}. Tick: {self.get_tick()}. ///"
+
+    def send_network(self, *args):
+        """
+        Sends the command to the network controller.
+        """
+        self.__network_controller.send(
+            f"{self.get_process()}{";" if args else ''}{';'.join(args)}"
+        )

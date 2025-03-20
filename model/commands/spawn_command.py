@@ -6,6 +6,10 @@ from model.player.player import Player
 from model.units.unit import Unit
 from util.coordinate import Coordinate
 from util.map import Map
+import typing
+
+if typing.TYPE_CHECKING:
+    from controller.network_controller import NetworkController
 
 
 class SpawnCommand(Command):
@@ -13,17 +17,18 @@ class SpawnCommand(Command):
 
     def __init__(
         self,
-        map: Map,
+        game_map: Map,
         player: Player,
         building: Building,
+        network_controller: "NetworkController",
         target_coord: Coordinate,
         convert_coeff: int,
         command_list: list[Command],
     ) -> None:
         """
         Initializes the SpawnCommand with the given map, player, building, target_coord and convert_coeff.
-        :param map: The map where the command will be executed
-        :type map: Map
+        :param game_map: The map where the command will be executed
+        :type game_map: Map
         :param player: The player that will execute the command.
         :type player: Player
         :param building: The building that will execute the command.
@@ -33,7 +38,9 @@ class SpawnCommand(Command):
         :param convert_coeff: The coefficient used to convert time to tick.
         :type convert_coeff: int
         """
-        super().__init__(map, player, building, Process.SPAWN, convert_coeff)
+        super().__init__(
+            game_map, player, building, network_controller, Process.SPAWN, convert_coeff
+        )
         self.set_time(UnitSpawner()[building.get_name()].get_spawning_time())
         self.set_tick(int(self.get_time() * convert_coeff))
         self.__target_coord = target_coord
@@ -89,6 +96,7 @@ class SpawnCommand(Command):
             self.get_interactions().place_object(
                 self.__place_holder, self.__target_coord
             )
+            self.send_network()
 
         if self.get_tick() <= 0:
             if self in self.__command_list:
@@ -96,6 +104,7 @@ class SpawnCommand(Command):
                 spawned: Unit = UnitSpawner()[self.get_entity().get_name()]
                 self.get_interactions().place_object(spawned, self.__target_coord)
                 self.get_interactions().link_owner(self.get_player(), spawned)
+                self.send_network()
 
                 super().remove_command_from_list(self.__command_list)
             else:

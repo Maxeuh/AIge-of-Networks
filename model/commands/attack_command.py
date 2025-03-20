@@ -4,6 +4,10 @@ from model.units.unit import Unit
 from util.coordinate import Coordinate
 from util.map import Map
 from util.state_manager import Process
+import typing
+
+if typing.TYPE_CHECKING:
+    from controller.network_controller import NetworkController
 
 
 class AttackCommand(Command):
@@ -14,6 +18,7 @@ class AttackCommand(Command):
         game_map: Map,
         player: Player,
         unit: Unit,
+        network_controller: "NetworkController",
         target_coord: Coordinate,
         convert_coeff: int,
         command_list: list[Command],
@@ -31,7 +36,9 @@ class AttackCommand(Command):
         :param convert_coeff: The coefficient used to convert time to tick.
         :type convert_coeff: int
         """
-        super().__init__(game_map, player, unit, Process.ATTACK, convert_coeff)
+        super().__init__(
+            game_map, player, unit, network_controller, Process.ATTACK, convert_coeff
+        )
         self.set_time(1)
         self.set_tick(int(self.get_time() * convert_coeff))
         self.__target_coord = target_coord
@@ -50,3 +57,4 @@ class AttackCommand(Command):
         if self.get_tick() <= 0:
             super().remove_command_from_list(self.__command_list)
         self.set_tick(self.get_tick() - 1)
+        self.send_network()

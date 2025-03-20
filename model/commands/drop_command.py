@@ -3,6 +3,10 @@ from model.player.player import Player
 from model.units.villager import Villager
 from util.coordinate import Coordinate
 from util.map import Map
+import typing
+
+if typing.TYPE_CHECKING:
+    from controller.network_controller import NetworkController
 
 
 class DropCommand(Command):
@@ -13,6 +17,7 @@ class DropCommand(Command):
         map: Map,
         player: Player,
         unit: Villager,
+        network_controller: "NetworkController",
         target_coord: Coordinate,
         convert_coeff: int,
         command_list: list[Command],
@@ -30,7 +35,9 @@ class DropCommand(Command):
         :param convert_coeff: The coefficient used to convert time to tick.
         :type convert_coeff: int
         """
-        super().__init__(map, player, unit, Process.DROP, convert_coeff)
+        super().__init__(
+            map, player, unit, network_controller, Process.DROP, convert_coeff
+        )
         self.__target_coord = target_coord
         self.__command_list = command_list
         super().push_command_to_list(command_list)
@@ -43,3 +50,4 @@ class DropCommand(Command):
             self.get_player(), self.get_entity(), self.__target_coord
         )
         super().remove_command_from_list(self.__command_list)
+        self.send_network()
