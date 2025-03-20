@@ -82,7 +82,7 @@ class GameController:
         """
         colors = ["blue", "red", "green", "yellow", "purple", "orange", "pink", "cyan"]
         for i in range(number_of_player):
-            player = Player("Player " + str(i+1), colors[i])
+            player = Player("Player 1", colors[0])
             self.get_players().append(player)
             player.set_command_manager(CommandManager(map, player, self.settings.fps.value, self.__command_list))
             player.set_task_manager(TaskManager(player.get_command_manager()))
@@ -129,7 +129,7 @@ class GameController:
         # Generate the players:
         # Place the town center of the first player at random position, far from the center (30% of map size).
         # Place the 2nd player town center at the opposite side of the map.
-        self.__generate_players(2, map_generation)
+        self.__generate_players(1, map_generation)
         interactions = Interactions(map_generation)
         first_player_coordinate = None
         min_distance = int(self.settings.map_size.value * 0.3)
