@@ -13,9 +13,6 @@ from model.buildings.building import Building
 from model.entity import Entity
 from enum import Enum
 from abc import ABC, abstractmethod
-from network.event_observer import GameEventObserver
-from network.network_manager import NetworkManager
-
 
 class Process(Enum):
     """This class is responsible for storing the processes that can be executed."""
@@ -436,20 +433,6 @@ class CommandManager:
         self.__player: Player = player
         self.__convert_coeff: int = convert_coeff
         self.__command_list: list[Command] = command_list
-        self.__event_observer=None
-        
-        
-    def set_event_observer(self,observer :GameEventObserver)->None:
-        """Définit l'observateur d'événements pour ce gestionnaire de commandes."""
-        self.__event_observer = observer
-        
-    def execute(self,command: Command):
-        result=command.execute()
-        if self.__event_observer:
-            self.__event_observer.observe_command(command)
-        
-        return result
-        
     def get_map(self):
         """
         Returns the map where the command will be executed.
