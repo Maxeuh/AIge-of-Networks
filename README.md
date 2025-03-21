@@ -1,6 +1,6 @@
 # AIge of Networks
 
-3<sup>rd</sup> year STI project at [INSA Centre Val de Loire](https://www.insa-centrevaldeloire.fr/), tutored by [M. TOINARD]. Forked from previous project made by group 6: [Maxeuh/AIge-of-EmpAIres](https://github.com/Maxeuh/AIge-of-EmpAIres).
+3<sup>rd</sup> year STI project at [INSA Centre Val de Loire](https://www.insa-centrevaldeloire.fr/), tutored by M. TOINARD. Forked from previous project made by group 6: [Maxeuh/AIge-of-EmpAIres](https://github.com/Maxeuh/AIge-of-EmpAIres).
 
 ## Table of Contents
 
