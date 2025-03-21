@@ -5,6 +5,7 @@ from model.resources.food import Food
 from model.resources.wood import Wood
 from model.resources.gold import Gold
 from model.units.villager import Villager
+from network.game_sender import GameSender
 from util.map import Map
 from util.coordinate import Coordinate
 from util.settings import Settings
@@ -35,7 +36,12 @@ class GameController:
 
         :param menu_controller: The menu controller.
         :type menu_controller: MenuController
+        1 is  load 
+        2 is not  load 
+        3 is visitor
         """
+        self.__game_sender = GameSender()
+        
         if load== 2:
             self.__menu_controller: 'MenuController' = menu_controller
             self.settings: Settings = self.__menu_controller.settings
@@ -48,6 +54,14 @@ class GameController:
             self.__game_thread = threading.Thread(target=self.game_loop)
             self.__ai_thread = threading.Thread(target=self.__ai_controller.ai_loop)
             self.__view_controller: ViewController = ViewController(self)
+            
+            
+            # Set up and start the game sender AFTER all other initialization
+            self.__game_sender.setup(self)
+            self.__game_sender.start()
+            self.__game_sender.handle_client_registration()
+            
+            
             self.__game_thread.start()
             self.__ai_thread.start()
             self.__view_controller.start_view()
@@ -333,6 +347,11 @@ class GameController:
         """Exits the game."""
         self.__running = False
         self.__ai_controller.exit()
+        
+        # Stop the game sender
+        if hasattr(self, '__game_sender'):
+            self.__game_sender.stop()
+            
         self.__menu_controller.exit()
 
     def get_speed(self) -> int:
