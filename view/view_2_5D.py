@@ -249,3 +249,24 @@ class View2_5D(BaseView):
         self.__running = False
         pygame.display.quit()
         pygame.quit()
+
+    def gather_map_items(self) -> dict:
+        """
+        Gather all map items as { (x, y): item_letter }.
+        """
+        result = {}
+        for coordinate, obj in self.__map.get_map().items():
+            if coordinate and obj:
+                result[(coordinate.get_x(), coordinate.get_y())] = obj.get_letter()
+        return result
+
+    def update_map_state(self, item_data: dict) -> None:
+        """
+        Insert external item data into the local map so a visitor
+        can render what other players see.
+        item_data expected: { (x, y): item_letter }
+        """
+        for (x, y), letter in item_data.items():
+            # Example placeholder for actual item creation/updates:
+            # self.__map.add(SomeObject(letter), Coordinate(x, y))
+            pass
