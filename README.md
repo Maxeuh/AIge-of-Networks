@@ -14,7 +14,7 @@
 
 ## Introduction
 
-The goal of this project is to create a real-time strategy game (RTS) using artificial intelligence (AI) techniques. The game is based on Age of Empires II.
+The goal of this project is to make our previous project, [AIge of EmpAIres](https://github.com/Maxeuh/AIge-of-EmpAIres), work on a network. This will allow us to play the game on different computers, and to have a better understanding of how networks work.
 
 ## Installation
 
