@@ -97,3 +97,4 @@ class MenuOptions(Enum):
     RESTART = 4
     LOAD_GAME = 5
     SAVE_GAME = 6
+    VISITOR=7
