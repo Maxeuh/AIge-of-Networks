@@ -2,56 +2,55 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <errno.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
 #include <arpa/inet.h>
 
-#define UDP_PORT 8080
+#define PORT 23456 // Doit correspondre au port utilisé dans ourmain_linux.c
 #define BUFFER_SIZE 1024
 
 int main() {
-    int sock;
-    struct sockaddr_in server_addr, client_addr;
+    int sockfd;
+    struct sockaddr_in server_addr;
     char buffer[BUFFER_SIZE];
-    socklen_t addr_len = sizeof(client_addr);
-  
-    // Création socket
-    if ((sock = socket(AF_INET, SOCK_DGRAM, 0)) < 0) {
-        perror("Erreur socket");
-        exit(EXIT_FAILURE);
+    socklen_t addr_len = sizeof(server_addr);
+
+    // Créer un socket UDP
+    sockfd = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+    if (sockfd < 0) {
+        perror("Socket creation failed");
+        return EXIT_FAILURE;
     }
 
-    // Configuration pour recevoir le broadcast
-    int broadcast_enable = 1;
-    if (setsockopt(sock, SOL_SOCKET, SO_BROADCAST, 
-                   &broadcast_enable, sizeof(broadcast_enable)) < 0) {
-        perror("Erreur activation broadcast");
-        exit(EXIT_FAILURE);
-    }
-
-    // Configuration adresse serveur
+    // Configurer l'adresse pour écouter les messages
     memset(&server_addr, 0, sizeof(server_addr));
     server_addr.sin_family = AF_INET;
-    server_addr.sin_addr.s_addr = INADDR_ANY;  // Écoute toutes les interfaces
-    server_addr.sin_port = htons(UDP_PORT);
+    server_addr.sin_addr.s_addr = htonl(INADDR_ANY); // Écoute sur toutes les interfaces
+    server_addr.sin_port = htons(PORT);
 
-    // Bind
-    if (bind(sock, (struct sockaddr*)&server_addr, sizeof(server_addr)) < 0) {
-        perror("Erreur bind");
-        exit(EXIT_FAILURE);
+    // Associer le socket à l'adresse et au port
+    if (bind(sockfd, (struct sockaddr *)&server_addr, sizeof(server_addr)) < 0) {
+        perror("Bind failed");
+        close(sockfd);
+        return EXIT_FAILURE;
     }
 
-    printf("En attente de messages broadcast sur le port %d...\n", UDP_PORT);
+    printf("Listening for broadcast messages on port %d...\n", PORT);
 
+    // Boucle pour recevoir les messages
     while (1) {
-        int recv_len = recvfrom(sock, buffer, BUFFER_SIZE, 0,
-                               (struct sockaddr*)&client_addr, &addr_len);
-        
-        if (recv_len > 0) {
-            buffer[recv_len] = '\0';
-            printf("Message reçu de %s: %s\n", 
-                   inet_ntoa(client_addr.sin_addr), buffer);
+        int recv_len = recvfrom(sockfd, buffer, BUFFER_SIZE - 1, 0, 
+                                (struct sockaddr *)&server_addr, &addr_len);
+        if (recv_len < 0) {
+            perror("recvfrom failed");
+            continue;
         }
+
+        buffer[recv_len] = '\0'; // Terminer la chaîne reçue
+        printf("Received broadcast message: %s\n", buffer);
     }
 
-    close(sock);
+    close(sockfd);
     return 0;
 }

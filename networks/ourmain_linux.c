@@ -8,8 +8,9 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 
+
 #define PORT 23456
-#define BROADCAST_IP "172.20.15.255"
+#define BROADCAST_IP "192.168.79.255"
 #define IPC_PORT 12347
 #define MAX_CLIENTS 10
 #define UPDATE_INTERVAL 5000000 // 5 seconds in microseconds
