@@ -86,5 +86,42 @@ class Entity(GameObject):
         :type task: Task
         """
         self.__task = task
-    
-    
+
+    # When a move event happens, make sure any debug prints are controlled
+    def move_to(self, coordinate):
+        # Get the state before the move
+        old_position = None
+        if hasattr(self, "get_coordinate") and self.get_coordinate():
+            old_position = {
+                "x": self.get_coordinate().get_x(),
+                "y": self.get_coordinate().get_y()
+            }
+        
+        # Perform the move using your existing code
+        self._coordinate = coordinate  # Or however you update position
+        
+        # Send network update
+        if hasattr(self, "_owner") and hasattr(self._owner, "get_game_controller"):
+            game_controller = self._owner.get_game_controller()
+            if hasattr(game_controller, "event_sender"):
+                # Use debug_print instead of print for any debug information
+                if hasattr(game_controller, "debug_print"):
+                    game_controller.debug_print(f"Entity {self.get_id()} moving to {coordinate.get_x()}, {coordinate.get_y()}")
+                event_data = {
+                    "entity_id": self.get_id() if hasattr(self, "get_id") else str(id(self)),
+                    "entity_type": self.__class__.__name__,
+                    "player_id": self._owner.get_id() if hasattr(self, "_owner") else None,
+                    "old_position": old_position,
+                    "new_position": {
+                        "x": coordinate.get_x(),
+                        "y": coordinate.get_y()
+                    }
+                }
+                game_controller.event_sender.send_event("MOVE", event_data)
+
+    def get_id(self):
+        """Get a unique identifier for this entity"""
+        if not hasattr(self, "_entity_id"):
+            self._entity_id = str(id(self))
+        return self._entity_id
+

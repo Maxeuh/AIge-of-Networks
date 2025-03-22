@@ -18,6 +18,9 @@ from pygame import time
 from model.player.strategy import Strategy1
 import threading
 import typing
+from network.game_network import GameEventSender
+from network.network_manager import NetworkManager
+
 if typing.TYPE_CHECKING:
     from controller.menu_controller import MenuController
 class GameController:
@@ -30,7 +33,7 @@ class GameController:
             GameController._instance = GameController(menu_controller)
         return GameController._instance
 
-    def __init__(self, menu_controller: 'MenuController', load: int = 2) -> None:
+    def __init__(self, menu_controller: 'MenuController', load: int = 2, player_number=1) -> None:
         """
         Initializes the GameController with the given settings.
 
@@ -41,6 +44,14 @@ class GameController:
         3 is visitor
         """
         self.__game_sender = GameSender()
+        
+        # Store player number
+        self.player_number = player_number
+        
+        # Use different AI settings based on player number
+        if player_number == 2:
+            # Second player has different settings
+            self.is_ai_enabled = False  # Example setting
         
         if load== 2:
             self.__menu_controller: 'MenuController' = menu_controller
@@ -61,6 +72,9 @@ class GameController:
             self.__game_sender.start()
             self.__game_sender.handle_client_registration()
             
+            # Initialize network manager
+            self.network_manager = NetworkManager(self)
+            self.network_manager.start()
             
             self.__game_thread.start()
             self.__ai_thread.start()
@@ -89,8 +103,8 @@ class GameController:
             self.__game_thread = None
             self.__view_controller.start_view()
                 
-
-     
+        # Initialize network event sender
+        self.event_sender = GameEventSender()
 
     def start_all_threads(self, is_visitor: bool = False):
         """
@@ -348,6 +362,10 @@ class GameController:
         self.__running = False
         self.__ai_controller.exit()
         
+        # Stop network components
+        if hasattr(self, 'network_manager'):
+            self.network_manager.stop()
+        
         # Stop the game sender
         if hasattr(self, '__game_sender'):
             self.__game_sender.stop()
@@ -365,14 +383,74 @@ class GameController:
         """
         for command in self.__command_list.copy():
             try:
-                #print(f"Command {command} is being executed")
+                # Store state before command execution for comparison
+                entity = command.get_entity()
+                prev_state = self._capture_entity_state(entity)
+                
+                # Execute the command
                 command.run_command()
+                
+                # Compare state and send update if changed
+                new_state = self._capture_entity_state(entity)
+                if self._state_changed(prev_state, new_state):
+                    self._send_entity_update(entity, command, prev_state, new_state)
+                    
             except (ValueError, AttributeError) as e:
-               #print(e)
-                #print("Command failed.")
                 command.remove_command_from_list(self.__command_list)
                 command.get_entity().set_task(None)
-                #exit()
+    
+    def _capture_entity_state(self, entity):
+        """Capture the current state of an entity for comparison"""
+        state = {}
+        
+        # Capture position if available
+        if hasattr(entity, "get_coordinate") and entity.get_coordinate():
+            state["position"] = {
+                "x": entity.get_coordinate().get_x(),
+                "y": entity.get_coordinate().get_y()
+            }
+        
+        # Capture health if available
+        if hasattr(entity, "get_health"):
+            state["health"] = entity.get_health()
+        
+        # Add any other state you need to track
+        
+        return state
+    
+    def _state_changed(self, prev_state, new_state):
+        """Check if the entity state has changed"""
+        # Compare positions
+        if "position" in prev_state and "position" in new_state:
+            if (prev_state["position"]["x"] != new_state["position"]["x"] or
+                prev_state["position"]["y"] != new_state["position"]["y"]):
+                return True
+                
+        # Compare health
+        if "health" in prev_state and "health" in new_state:
+            if prev_state["health"] != new_state["health"]:
+                return True
+                
+        # Add other comparisons as needed
+        
+        return False
+    
+    def _send_entity_update(self, entity, command, prev_state, new_state):
+        """Send a network update about an entity state change"""
+        # Determine the event type based on the command
+        event_type = command.__class__.__name__.upper().replace("COMMAND", "")
+        
+        # Create the event data
+        event_data = {
+            "entity_id": entity.get_id() if hasattr(entity, "get_id") else str(id(entity)),
+            "entity_type": entity.__class__.__name__,
+            "player_id": entity.get_owner().get_id() if hasattr(entity, "get_owner") else None,
+            "previous_state": prev_state,
+            "current_state": new_state
+        }
+        
+        # Send the event using network manager instead of event_sender
+        self.network_manager.send_game_event(event_type, event_data)
 
     
     def load_task(self) -> None:
