@@ -36,10 +36,10 @@ class NetworkController:
         self.__create_socket()
             
         try:
-            print(f"[DEBUG] Connecting to {self.__address[0]}:{self.__address[1]}...")
+            #print(f"[DEBUG] Connecting to {self.__address[0]}:{self.__address[1]}...")
             self.__sock.connect(self.__address)
             self.__connected = True
-            print("[DEBUG] Connected successfully")
+            #print("[DEBUG] Connected successfully")
             return True
         except ConnectionRefusedError:
             print("[DEBUG] Connection refused - is the receiver running?")
@@ -52,7 +52,7 @@ class NetworkController:
         """
         Sends a message to the C program that runs the game.
         """
-        print(f"[DEBUG] Sending TCP: {message[:50]}...")  # Print first 50 chars
+        #print(f"[DEBUG] Sending TCP: {message[:50]}...")  # Print first 50 chars
         
         if not self.__connected and not self.connect():
             print("[DEBUG] Failed to connect")
@@ -60,7 +60,7 @@ class NetworkController:
             
         try:
             self.__sock.sendall(message.encode())
-            print("[DEBUG] Message sent successfully")
+            #print("[DEBUG] Message sent successfully")
         except Exception as e:
             print(f"[DEBUG] Error sending message: {e}")
             self.__connected = False

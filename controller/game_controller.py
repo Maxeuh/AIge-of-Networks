@@ -371,10 +371,8 @@ class GameController:
 
     def start(self) -> None:
         """Starts the game."""
-        print("[DEBUG] Game starting, sending initial map data")
         self.__running = True
         self.send_initial_map_data()  # Send map data when game starts
-        print("[DEBUG] Initial map data sent")
 
     def exit(self) -> None:
         """Exits the game."""
