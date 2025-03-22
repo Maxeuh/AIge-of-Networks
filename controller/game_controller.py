@@ -101,11 +101,16 @@ class GameController:
 
     def __assign_AI(self) -> None:
         for player in self.get_players():
-            player.set_ai(AI(player, None, map))
-            player.get_ai().set_strategy(DefaultStrategy(player.get_ai(), 5))
-            # print(f"Player {player.get_name()} has strat {player.get_ai().get_strategy()}")
+            player.set_ai(AI(player, None, self.__map))
+            
+            # Use RandomStrategy instead of DefaultStrategy for testing
+            from model.player.strategies.random_strategy import RandomStrategy
+            player.get_ai().set_strategy(RandomStrategy(player.get_ai()))
+            
+            # Initialize player coordinate for AI navigation
             player.update_centre_coordinate()
-
+            
+            # Rest of resources assignment...
             option = StartingCondition(self.settings.starting_condition)
             if option == StartingCondition.LEAN:
                 player.collect(Food(), 50)
@@ -141,7 +146,7 @@ class GameController:
         # Generate the players:
         # Place the town center of the first player at random position, far from the center (30% of map size).
         # Place the 2nd player town center at the opposite side of the map.
-        self.__generate_players(2, map_generation)
+        self.__generate_players(1, map_generation)
         interactions = Interactions(map_generation)
         first_player_coordinate = None
         min_distance = int(self.settings.map_size.value * 0.3)
@@ -372,7 +377,11 @@ class GameController:
     def start(self) -> None:
         """Starts the game."""
         self.__running = True
-        self.send_initial_map_data()  # Send map data when game starts
+        # Send initial map data first
+        self.send_initial_map_data()
+        
+        # Then initialize AI to prevent command data being sent before map data
+        self.__assign_AI()
 
     def exit(self) -> None:
         """Exits the game."""
