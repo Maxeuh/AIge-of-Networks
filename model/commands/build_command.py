@@ -6,6 +6,7 @@ from model.units.villager import Villager
 from util.coordinate import Coordinate
 from util.map import Map
 import typing
+import json
 
 if typing.TYPE_CHECKING:
     from controller.network_controller import NetworkController
@@ -93,3 +94,23 @@ class BuildCommand(Command):
                     )
             super().remove_command_from_list(self.__command_list)
         self.set_tick(self.get_tick() - 1)
+
+    def send_network(self):
+        """
+        Sends the build command information via network.
+        """
+        entity = self.get_entity()
+        command_data = {
+            "command": "BUILD",
+            "entity_id": id(entity),
+            "entity_type": entity.__class__.__name__,
+            "entity_name": entity.get_name(), 
+            "player": self.get_player().get_name(),
+            "building_type": self.__building.__class__.__name__,
+            "building_name": self.__building.get_name(),
+            "building_x": self.__target_coord.get_x(),
+            "building_y": self.__target_coord.get_y(),
+            "building_size": self.__building.get_size(),
+            "ticks_remaining": self.get_tick()
+        }
+        super().send_network(json.dumps(command_data))
