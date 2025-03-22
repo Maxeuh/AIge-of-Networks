@@ -427,6 +427,12 @@ class GameController:
             self.start()
             while self.__running:
                 try:
+                    # NEW: Process broadcasts from other games first
+                    broadcasts = self.__network_controller.get_received_broadcasts()
+                    for broadcast in broadcasts:
+                        self.__process_broadcast(broadcast)
+                    
+                    # Existing game loop logic
                     self.load_task()
                     self.update()
                     time.Clock().tick(self.settings.fps.value * self.get_speed())
@@ -537,3 +543,43 @@ class GameController:
         # Convert to string and send
         msg = f"MAP_DATA;{json.dumps(game_data)}"
         self.__network_controller.send(msg)
+
+    def __process_broadcast(self, broadcast):
+        """Process network data received from other game instances"""
+        try:
+            # Parse message type
+            parts = broadcast.split(';', 1)
+            if len(parts) < 2:
+                return
+                
+            msg_type, data = parts
+            print(f"Processing {msg_type} broadcast")
+            
+            if msg_type == "MAP_DATA":
+                # Process initial map data from other instance
+                json_data = json.loads(data)
+                # Could merge map data or decide which takes precedence
+                # For simplicity, the first game to send map data could be "master"
+                
+            elif msg_type == "MOVE":
+                # Process move commands from other game instance
+                move_data = json.loads(data)
+                # Implement executing move commands
+                
+            elif msg_type == "BUILD":
+                # Process build commands from other game instance
+                build_data = json.loads(data)
+                # Implement executing build commands
+                
+            elif msg_type == "COLLECT":
+                # Process collect commands
+                collect_data = json.loads(data)
+                # Implement executing collect commands
+                
+            elif msg_type == "ATTACK":
+                # Process attack commands
+                attack_data = json.loads(data)
+                # Implement executing attack commands
+                
+        except Exception as e:
+            print(f"Error processing broadcast: {e}")
