@@ -1,10 +1,7 @@
 import sys
 import os
 sys.path.append('/home/hblbechir/AIge-of-Networks')
-from network.quiet_print import enable_quiet_print, disable_quiet_print
 
-# Enable quiet printing at startup
-enable_quiet_print()
 
 import socket
 import threading
