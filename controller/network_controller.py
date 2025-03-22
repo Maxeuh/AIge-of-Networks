@@ -42,10 +42,10 @@ class NetworkController:
             #print("[DEBUG] Connected successfully")
             return True
         except ConnectionRefusedError:
-            print("[DEBUG] Connection refused - is the receiver running?")
+            #print("[DEBUG] Connection refused - is the receiver running?")
             return False
         except Exception as e:
-            print(f"[DEBUG] Connection error: {e}")
+            #print(f"[DEBUG] Connection error: {e}")
             return False
 
     def send(self, message: str) -> None:
@@ -55,14 +55,14 @@ class NetworkController:
         #print(f"[DEBUG] Sending TCP: {message[:50]}...")  # Print first 50 chars
         
         if not self.__connected and not self.connect():
-            print("[DEBUG] Failed to connect")
+            #print("[DEBUG] Failed to connect")
             return
             
         try:
             self.__sock.sendall(message.encode())
             #print("[DEBUG] Message sent successfully")
         except Exception as e:
-            print(f"[DEBUG] Error sending message: {e}")
+            #print(f"[DEBUG] Error sending message: {e}")
             self.__connected = False
 
     def receive(self) -> str:
@@ -78,7 +78,7 @@ class NetworkController:
         except socket.timeout:
             return ""
         except Exception as e:
-            print(f"[DEBUG] Error receiving message: {e}")
+            #print(f"[DEBUG] Error receiving message: {e}")
             self.__connected = False
             return ""
 
