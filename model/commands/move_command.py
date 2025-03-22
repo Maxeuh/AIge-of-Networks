@@ -5,6 +5,7 @@ from util.coordinate import Coordinate
 from util.map import Map
 from util.state_manager import Process
 import typing
+import json
 
 if typing.TYPE_CHECKING:
     from controller.network_controller import NetworkController
@@ -55,3 +56,21 @@ class MoveCommand(Command):
         if self.get_tick() <= 0:
             super().remove_command_from_list(self.__command_list)
         self.set_tick(self.get_tick() - 1)
+
+    def send_network(self):
+        """
+        Sends the move command information via network.
+        """
+        entity = self.get_entity()
+        command_data = {
+            "command": "MOVE",
+            "entity_id": id(entity),
+            "entity_type": entity.__class__.__name__,
+            "entity_name": entity.get_name(),
+            "player": self.get_player().get_name(),
+            "from_x": entity.get_coordinate().get_x(),
+            "from_y": entity.get_coordinate().get_y(),
+            "to_x": self.__target_coord.get_x(),
+            "to_y": self.__target_coord.get_y()
+        }
+        super().send_network(json.dumps(command_data))
