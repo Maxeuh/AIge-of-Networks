@@ -7,16 +7,17 @@ class NetworkController:
     """
     The goal of this class is to provide a way to interact with the other
     players on the network, by sending and receiving messages.
-    This class sends messages locally to the C program that runs with the
-    game, and receives messages from it, using UDP sockets.
+    This class sends messages locally to the C program using TCP,
+    and receives messages from other games via UDP broadcasts.
     """
 
     def __init__(self) -> None:
-        # UDP socket for sending to local relay
+        # TCP socket for sending to local relay
         self.__sock = None
         self.__address = ("127.0.0.1", 9090)
         self.__connected = False
-        self.__create_socket()
+        
+        
         
         # UDP socket for receiving broadcasts from other machines
         self.__udp_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -31,73 +32,78 @@ class NetworkController:
         self.__receiver_thread.start()
         
     def __create_socket(self) -> None:
-        """Create a new UDP socket with appropriate settings"""
+        """Create a new TCP socket for communication with the relay"""
         if self.__sock:
             try:
                 self.__sock.close()
             except:
                 pass
-        # Changed to UDP socket
-        self.__sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        self.__connected = True  # UDP doesn't need connection
+        # Changed to TCP socket
+        self.__sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.__connected = False
 
     def connect(self) -> bool:
         """
-        For UDP, we don't need to connect, but we keep this method for compatibility
+        Connect to the local relay program using TCP
         """
         if not self.__sock:
             self.__create_socket()
+            
+        if not self.__connected:
+            try:
+                self.__sock.connect(self.__address)
+                self.__connected = True
+                print(f"Connected to relay at {self.__address[0]}:{self.__address[1]}")
+                return True
+            except Exception as e:
+                print(f"TCP connection failed: {e}")
+                return False
         return True
 
     def send(self, message: str) -> None:
         """
-        Sends a message to the receiver.c program using UDP.
-        Handles large messages by splitting them into chunks.
+        Sends a message to the relay program using TCP.
+        Handles large messages by adding length prefix.
         """
-        if not self.__sock:
-            self.__create_socket()
+        if not self.__sock or not self.__connected:
+            if not self.connect():
+                print("Failed to connect, cannot send message")
+                return
             
         try:
-            # Split message if needed
-            MAX_CHUNK_SIZE = 60000  # Safe UDP packet size
+            # Encode the message
             data = message.encode()
             
-            if len(data) > MAX_CHUNK_SIZE:
-                # For large messages like MAP_DATA, split into chunks
-                chunks = [data[i:i+MAX_CHUNK_SIZE] for i in range(0, len(data), MAX_CHUNK_SIZE)]
-                msg_id = int(time.time() * 1000)  # Unique message ID
-                
-                for i, chunk in enumerate(chunks):
-                    # Format: CHUNK;msg_id;chunk_num;total_chunks;data
-                    header = f"CHUNK;{msg_id};{i};{len(chunks)};".encode()
-                    self.__sock.sendto(header + chunk, self.__address)
-                    time.sleep(0.01)  # Prevent network congestion
-                    print(f"Sent chunk {i+1}/{len(chunks)} of size {len(chunk)}")
-            else:
-                # For small messages, send directly
-                self.__sock.sendto(data, self.__address)
+            # Send message length as 4-byte integer
+            message_len = len(data)
+            self.__sock.sendall(message_len.to_bytes(4, byteorder='big'))
+            
+            # Send the actual message data
+            self.__sock.sendall(data)
+            
+            print(f"Sent {message_len} bytes via TCP")
         except Exception as e:
-            print(f"Error sending UDP message: {e}")
-
-    def receive(self) -> str:
-        """
-        This method is not used with UDP as we use the receiver thread instead
-        """
-        return ""
+            print(f"Error sending TCP message: {e}")
+            self.__connected = False
+            self.__create_socket()  # Reset socket for next attempt
 
     def __listen_for_broadcasts(self):
         """Background thread that listens for UDP broadcasts from other games"""
         self.__udp_sock.settimeout(0.5)  # Short timeout for checking __running
         
         # Store our own IP addresses to filter out our broadcasts
-        import socket
         local_ip = socket.gethostbyname(socket.gethostname())
         localhost = "127.0.0.1"
-        own_ips = [local_ip, localhost]
-        
-        # Dictionary to store reassembled chunked messages
-        chunked_messages = {}
-        
+        # Get all interface IPs to properly filter our own broadcasts
+        own_ips = [localhost, local_ip]
+        try:
+            # Try to get all interface IPs
+            for interface in socket.getaddrinfo(socket.gethostname(), None):
+                if interface[4][0] not in own_ips:
+                    own_ips.append(interface[4][0])
+        except:
+            pass
+            
         print(f"Listening for broadcasts on port 9091, own IPs: {own_ips}")
         
         while self.__running:
@@ -109,15 +115,10 @@ class NetworkController:
                         continue
                         
                     decoded_data = data.decode()
-                    print(f"Received broadcast from {addr[0]}:{addr[1]}")
+                    print(f"Received broadcast from {addr[0]}:{addr[1]}, {len(decoded_data)} bytes")
                     
-                    # Check if it's a chunked message
-                    if decoded_data.startswith("CHUNK;"):
-                        # Process chunking (this is handled by receiver.c in this architecture)
-                        pass
-                    else:
-                        # Normal message, process directly
-                        self.__received_data.append(decoded_data)
+                    # Add to received data queue
+                    self.__received_data.append(decoded_data)
             except socket.timeout:
                 # This is just for the timeout to check __running periodically
                 pass
@@ -133,10 +134,16 @@ class NetworkController:
         return data
     
     def close(self) -> None:
-        """Closes both UDP sockets and stops the receiver thread."""
+        """Closes both sockets and stops the receiver thread."""
         self.__running = False
         if self.__sock:
-            self.__sock.close()
+            try:
+                self.__sock.close()
+            except:
+                pass
         if hasattr(self, '__udp_sock') and self.__udp_sock:
-            self.__udp_sock.close()
+            try:
+                self.__udp_sock.close()
+            except:
+                pass
         self.__connected = False
