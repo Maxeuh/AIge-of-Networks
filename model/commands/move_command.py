@@ -40,6 +40,8 @@ class MoveCommand(Command):
         )
         self.set_time(unit.get_speed())
         self.set_tick(int(self.get_time() * convert_coeff))
+        self.__original_x = unit.get_coordinate().get_x()  # Store x directly
+        self.__original_y = unit.get_coordinate().get_y()  # Store y directly
         self.__target_coord = target_coord
         self.__command_list = command_list
         self.__start: bool = True
@@ -68,8 +70,8 @@ class MoveCommand(Command):
             "entity_type": entity.__class__.__name__,
             "entity_name": entity.get_name(),
             "player": self.get_player().get_name(),
-            "from_x": entity.get_coordinate().get_x(),
-            "from_y": entity.get_coordinate().get_y(),
+            "from_x": self.__original_x,  # Use stored original x
+            "from_y": self.__original_y,  # Use stored original y
             "to_x": self.__target_coord.get_x(),
             "to_y": self.__target_coord.get_y()
         }
