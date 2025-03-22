@@ -8,6 +8,8 @@ from pygame import time
 from controller.ai_controller import AIController
 from controller.command_controller import CommandController
 from controller.network_controller import NetworkController
+from model.buildings.farm import Farm
+from model.buildings.house import House
 from model.interactions import Interactions
 from controller.task_manager import TaskController
 from controller.view_controller import ViewController
@@ -24,7 +26,7 @@ from model.units.villager import Villager
 from util.coordinate import Coordinate
 from util.map import Map
 from util.settings import Settings
-from util.state_manager import MapType, StartingCondition
+from util.state_manager import MapType, Process, StartingCondition
 
 if typing.TYPE_CHECKING:
     from controller.menu_controller import MenuController
@@ -558,28 +560,74 @@ class GameController:
             if msg_type == "MAP_DATA":
                 # Process initial map data from other instance
                 json_data = json.loads(data)
-                # Could merge map data or decide which takes precedence
-                # For simplicity, the first game to send map data could be "master"
-                
+                # Just for simplicity, merge player resources
+                for player_data in json_data["players"]:
+                    for player in self.__players:
+                        if player.get_name() == player_data["name"]:
+                            for resource_type, amount in player_data["resources"].items():
+                                if resource_type == "Food":
+                                    player.collect(Food(), amount)
+                                elif resource_type == "Wood":
+                                    player.collect(Wood(), amount)
+                                elif resource_type == "Gold":
+                                    player.collect(Gold(), amount)
+            
             elif msg_type == "MOVE":
                 # Process move commands from other game instance
                 move_data = json.loads(data)
-                # Implement executing move commands
+                # Find the entity and move it
+                for player in self.__players:
+                    if player.get_name() == move_data["player"]:
+                        for unit in player.get_units():
+                            # Match by location instead of ID
+                            if (unit.get_name() == move_data["entity_name"] and 
+                                unit.get_coordinate().get_x() == move_data["from_x"] and
+                                unit.get_coordinate().get_y() == move_data["from_y"]):
+                                # Create and execute move command
+                                target = Coordinate(move_data["to_x"], move_data["to_y"])
+                                player.get_command_manager().command(
+                                    unit, Process.MOVE, target)
+                                break
                 
             elif msg_type == "BUILD":
                 # Process build commands from other game instance
                 build_data = json.loads(data)
-                # Implement executing build commands
+                # Find the entity and execute build
+                for player in self.__players:
+                    if player.get_name() == build_data["player"]:
+                        for unit in player.get_units():
+                            if unit.get_name() == build_data["entity_name"]:
+                                target = Coordinate(build_data["building_x"], 
+                                                  build_data["building_y"])
+                                
+                                # Create the building based on type
+                                building_type = build_data["building_type"]
+                                if building_type == "Farm":
+                                    building = Farm()
+                                elif building_type == "House":
+                                    building = House()
+                                elif building_type == "TownCenter":
+                                    building = TownCenter()
+                                # Add more building types as needed
+                                
+                                player.get_command_manager().command(
+                                    unit, Process.BUILD, target, building)
+                                break
                 
             elif msg_type == "COLLECT":
                 # Process collect commands
                 collect_data = json.loads(data)
-                # Implement executing collect commands
-                
-            elif msg_type == "ATTACK":
-                # Process attack commands
-                attack_data = json.loads(data)
-                # Implement executing attack commands
+                for player in self.__players:
+                    if player.get_name() == collect_data["player"]:
+                        for unit in player.get_units():
+                            if unit.get_name() == collect_data["entity_name"]:
+                                target = Coordinate(collect_data["resource_x"], 
+                                                  collect_data["resource_y"])
+                                player.get_command_manager().command(
+                                    unit, Process.COLLECT, target)
+                                break
                 
         except Exception as e:
             print(f"Error processing broadcast: {e}")
+            import traceback
+            traceback.print_exc()
