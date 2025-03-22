@@ -1,6 +1,7 @@
 import random
 import threading
 import typing
+import json
 
 from pygame import time
 
@@ -370,7 +371,10 @@ class GameController:
 
     def start(self) -> None:
         """Starts the game."""
+        print("[DEBUG] Game starting, sending initial map data")
         self.__running = True
+        self.send_initial_map_data()  # Send map data when game starts
+        print("[DEBUG] Initial map data sent")
 
     def exit(self) -> None:
         """Exits the game."""
@@ -471,3 +475,51 @@ class GameController:
         :rtype: NetworkController
         """
         return self.__network_controller
+
+    def send_initial_map_data(self) -> None:
+        """
+        Sends the initial map data, player information, and object positions 
+        through UDP to connected clients.
+        """
+        # Create a dictionary with all game data
+        game_data = {
+            "map_size": self.__map.get_size(),
+            "players": [],
+            "objects": []
+        }
+        
+        # Add player data
+        for player in self.__players:
+            player_data = {
+                "name": player.get_name(),
+                "color": player.get_color(),
+                "resources": player.get_resources()
+            }
+            game_data["players"].append(player_data)
+        
+        # Add all objects on the map
+        for y in range(self.__map.get_size()):
+            for x in range(self.__map.get_size()):
+                coord = Coordinate(x, y)
+                obj = self.__map.get_object(coord)
+                if obj:
+                    obj_data = {
+                        "type": obj.__class__.__name__,
+                        "name": obj.get_name(),
+                        "x": x, 
+                        "y": y,
+                        "size": obj.get_size(),
+                        "owner": None
+                    }
+                    
+                    # Find the owner if applicable
+                    for player in self.__players:
+                        if obj in player.get_units() or obj in player.get_buildings():
+                            obj_data["owner"] = player.get_name()
+                            break
+                    
+                    game_data["objects"].append(obj_data)
+        
+        # Convert to string and send
+        msg = f"MAP_DATA;{json.dumps(game_data)}"
+        self.__network_controller.send(msg)
