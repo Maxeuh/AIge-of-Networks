@@ -15,7 +15,7 @@ from model.ai import AI
 from model.buildings.town_center import TownCenter
 from model.commands.command import Command
 from model.player.player import Player
-from model.player.strategies.default_strategy import DefaultStrategy
+from model.player.strategies.random_strategy import RandomStrategy
 from model.resources.food import Food
 from model.resources.gold import Gold
 from model.resources.wood import Wood
@@ -80,36 +80,33 @@ class GameController:
     def get_commandlist(self):
         return self.__command_list
 
-    def __generate_players(self, number_of_player: int, game_map: Map) -> None:
+    def __generate_player(self, player_id: int, game_map: Map) -> None:
         """
-        Generates the players based on the settings.
+        Generates a player based on the settings.
         """
         colors = ["blue", "red", "green", "yellow", "purple", "orange", "pink", "cyan"]
-        for i in range(number_of_player):
-            player = Player("Player " + str(i + 1), colors[i])
-            self.get_players().append(player)
-            player.set_command_manager(
-                CommandController(
-                    game_map,
-                    player,
-                    self.settings.fps.value,
-                    self.__command_list,
-                    self.__network_controller,
-                )
+        player = Player("Player " + str(player_id + 1), colors[player_id])
+        self.get_players().append(player)
+        player.set_command_manager(
+            CommandController(
+                game_map,
+                player,
+                self.settings.fps.value,
+                self.__command_list,
+                self.__network_controller,
             )
-            player.set_task_manager(TaskController(player.get_command_manager()))
+        )
+        player.set_task_manager(TaskController(player.get_command_manager()))
 
     def __assign_AI(self) -> None:
         for player in self.get_players():
             player.set_ai(AI(player, None, self.__map))
-            
-            # Use RandomStrategy instead of DefaultStrategy for testing
-            from model.player.strategies.random_strategy import RandomStrategy
+
             player.get_ai().set_strategy(RandomStrategy(player.get_ai()))
-            
+
             # Initialize player coordinate for AI navigation
             player.update_centre_coordinate()
-            
+
             # Rest of resources assignment...
             option = StartingCondition(self.settings.starting_condition)
             if option == StartingCondition.LEAN:
@@ -146,107 +143,74 @@ class GameController:
         # Generate the players:
         # Place the town center of the first player at random position, far from the center (30% of map size).
         # Place the 2nd player town center at the opposite side of the map.
-        self.__generate_players(1, map_generation)
+        self.__generate_player(0, map_generation)
         interactions = Interactions(map_generation)
-        first_player_coordinate = None
         min_distance = int(self.settings.map_size.value * 0.3)
-        for player in self.get_players():
-            town_center = TownCenter()
-            if player == self.get_players()[0]:
-                while True:
-                    # Get a random coordinate. If it is at less than min_distance from the center, try again.
-                    center_size = 2 if map_generation.get_size() % 2 == 0 else 1
-                    center_coordinate = Coordinate(
-                        (map_generation.get_size() - center_size) // 2,
-                        (map_generation.get_size() - center_size) // 2,
-                    )
-                    coordinate = Coordinate(
-                        (map_generation.get_size() - center_size) // 2,
-                        (map_generation.get_size() - center_size) // 2,
-                    )
-                    while coordinate.distance(center_coordinate) < min_distance:
-                        coordinate = Coordinate(
-                            random.randint(0, self.settings.map_size.value - 1),
-                            random.randint(0, self.settings.map_size.value - 1),
-                        )
-                    coordinate_mirror = Coordinate(
-                        self.settings.map_size.value
-                        - 1
-                        - coordinate.get_x()
-                        - town_center.get_size()
-                        + 1,
-                        self.settings.map_size.value
-                        - 1
-                        - coordinate.get_y()
-                        - town_center.get_size()
-                        + 1,
-                    )
-                    if map_generation.check_placement(
-                        town_center, coordinate
-                    ) and map_generation.check_placement(
-                        town_center, coordinate_mirror
-                    ):
-                        break
-                first_player_coordinate = coordinate
-            else:
-                # Place the town center of the second player at the opposite side of the map.
-                coordinate = Coordinate(
-                    self.settings.map_size.value
-                    - 1
-                    - first_player_coordinate.get_x()
-                    - town_center.get_size()
-                    + 1,
-                    self.settings.map_size.value
-                    - 1
-                    - first_player_coordinate.get_y()
-                    - town_center.get_size()
-                    + 1,
-                )
-
-            # Place the town center and link it to the player
-            interactions.place_object(town_center, coordinate)
-            interactions.link_owner(player, town_center)
-            player.set_max_population(
-                player.get_max_population() + town_center.get_capacity_increase()
+        player = self.get_players()[0]
+        town_center = TownCenter()
+        while True:
+            # Get a random coordinate. If it is at less than min_distance from the center, try again.
+            center_size = 2 if map_generation.get_size() % 2 == 0 else 1
+            center_coordinate = Coordinate(
+                (map_generation.get_size() - center_size) // 2,
+                (map_generation.get_size() - center_size) // 2,
             )
+            coordinate = Coordinate(
+                (map_generation.get_size() - center_size) // 2,
+                (map_generation.get_size() - center_size) // 2,
+            )
+            while coordinate.distance(center_coordinate) < min_distance:
+                coordinate = Coordinate(
+                    random.randint(0, self.settings.map_size.value - 1),
+                    random.randint(0, self.settings.map_size.value - 1),
+                )
+            if map_generation.check_placement(town_center, coordinate):
+                break
 
-            # Generate a list of coordinates around the town center (not inside it)
-            arround_coordinates = []
-            for x in range(
-                coordinate.get_x() - 1, coordinate.get_x() + town_center.get_size()
+        # Place the town center and link it to the player
+        interactions.place_object(town_center, coordinate)
+        interactions.link_owner(player, town_center)
+        player.set_max_population(
+            player.get_max_population() + town_center.get_capacity_increase()
+        )
+
+        # Generate a list of coordinates around the town center (not inside it)
+        around_coordinates = []
+        for x in range(
+            coordinate.get_x() - 1, coordinate.get_x() + town_center.get_size() + 1
+        ):
+            for y in range(
+                coordinate.get_y() - 1, coordinate.get_y() + town_center.get_size() + 1
             ):
-                for y in range(
-                    coordinate.get_y() - 1, coordinate.get_y() + town_center.get_size()
+                if (
+                    x < 0
+                    or y < 0
+                    or x >= self.settings.map_size.value
+                    or y >= self.settings.map_size.value
                 ):
-                    if (
-                        x < 0
-                        or y < 0
-                        or x >= self.settings.map_size.value
-                        or y >= self.settings.map_size.value
-                    ):
-                        continue
-                    if (
-                        x < coordinate.get_x()
-                        or x >= coordinate.get_x() + town_center.get_size()
-                        or y < coordinate.get_y()
-                        or y >= coordinate.get_y() + town_center.get_size()
-                    ):
-                        arround_coordinates.append(Coordinate(x, y))
+                    continue
+                if (
+                    x < coordinate.get_x()
+                    or x > coordinate.get_x() + town_center.get_size()
+                    or y < coordinate.get_y()
+                    or y > coordinate.get_y() + town_center.get_size()
+                ):
+                    around_coordinates.append(Coordinate(x, y))
 
-            # Place 3 villagers for each player, at random positions around the town center
-            for _ in range(3):
-                villager = Villager()
-                # Get a random coordinate from the list and check placement
-                while True:
-                    coordinate = arround_coordinates.pop(
-                        random.randint(0, len(arround_coordinates) - 1)
-                    )
-                    if map_generation.check_placement(villager, coordinate):
-                        break
+        # Place 3 villagers for the player, at random positions around the town center
+        for _ in range(3):
+            villager = Villager()
+            # Get a random coordinate from the list and check placement
+            while True:
+                coordinate = around_coordinates.pop(
+                    random.randint(0, len(around_coordinates) - 1)
+                )
+                if map_generation.check_placement(villager, coordinate):
+                    break
 
-                # Place the villager and link it to the player
-                interactions.place_object(villager, coordinate)
-                interactions.link_owner(player, villager)
+            # Place the villager and link it to the player
+            interactions.place_object(villager, coordinate)
+            interactions.link_owner(player, villager)
 
         if MapType(self.settings.map_type) == MapType.RICH:
             # Wood need to occupe 5% of the map. It will be randomly placed
@@ -315,9 +279,9 @@ class GameController:
             # Generate a test map 10x10 with a town center at (0,0) and a villager at (5,5)
             map_generation = Map(120)
             interactions = Interactions(map_generation)
-            self.__generate_players(
-                2, map_generation
-            )  ## always in the creation of a new map, the players are generated before all generation of objects
+            self.__generate_player(0, map_generation)
+            ## always in the creation of a new map, the players are generated before all generation of objects
+            self.__generate_player(1, map_generation)
             self.get_players()[0].collect(Wood(), 1000)
             ## Init for player 1
             town_center1 = TownCenter()
@@ -378,8 +342,7 @@ class GameController:
         """Starts the game."""
         self.__running = True
         # Send initial map data first
-        self.send_initial_map_data()
-        
+
         # Then initialize AI to prevent command data being sent before map data
         self.__assign_AI()
 
@@ -402,7 +365,7 @@ class GameController:
         """
         for command in self.__command_list.copy():
             try:
-                #print(f"Command {command} is being executed")
+                # print(f"Command {command} is being executed")
                 command.run_command()
             except (ValueError, AttributeError):
                 # print(e)
@@ -426,14 +389,11 @@ class GameController:
         try:
             self.start()
             while self.__running:
-                try:
-                    self.load_task()
-                    self.update()
-                    time.Clock().tick(self.settings.fps.value * self.get_speed())
-                except Exception as e:
-                    print(f"Error in game loop: {e}")
+                self.load_task()
+                self.update()
+                time.Clock().tick(self.settings.fps.value * self.get_speed())
         except Exception as e:
-            print(f"Fatal error in game loop: {e}")
+            raise RuntimeError(f"Game loop failed: {e}")
 
     def resume(self) -> None:
         """
@@ -484,56 +444,3 @@ class GameController:
         :rtype: NetworkController
         """
         return self.__network_controller
-
-    def send_initial_map_data(self) -> None:
-        """
-        Sends the initial map data, player information, and object positions 
-        through UDP to connected clients.
-        """
-        # Create a dictionary with all game data
-        game_data = {
-            "map_size": self.__map.get_size(),
-            "players": [],
-            "objects": []
-        }
-        
-        # Add player data
-        for player in self.__players:
-            # Convert resources to serializable format
-            resources_dict = {}
-            for resource, amount in player.get_resources().items():
-                resources_dict[resource.__class__.__name__] = amount
-                
-            player_data = {
-                "name": player.get_name(),
-                "color": player.get_color(),
-                "resources": resources_dict  # Now using string keys
-            }
-            game_data["players"].append(player_data)
-        
-        # Add all objects on the map
-        for y in range(self.__map.get_size()):
-            for x in range(self.__map.get_size()):
-                coord = Coordinate(x, y)
-                obj = self.__map.get(coord)
-                if obj:
-                    obj_data = {
-                        "type": obj.__class__.__name__,
-                        "name": obj.get_name(),
-                        "x": x, 
-                        "y": y,
-                        "size": obj.get_size(),
-                        "owner": None
-                    }
-                    
-                    # Find the owner if applicable
-                    for player in self.__players:
-                        if obj in player.get_units() or obj in player.get_buildings():
-                            obj_data["owner"] = player.get_name()
-                            break
-                    
-                    game_data["objects"].append(obj_data)
-        
-        # Convert to string and send
-        msg = f"MAP_DATA;{json.dumps(game_data)}"
-        self.__network_controller.send(msg)
