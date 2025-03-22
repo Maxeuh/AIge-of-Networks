@@ -24,7 +24,7 @@ class MenuView:
         """
         game_state = GameState(game_state)
         if game_state == GameState.NOT_STARTED:
-            return [MenuOptions.START_GAME, MenuOptions.LOAD_GAME, MenuOptions.SETTINGS, MenuOptions.EXIT]
+            return [MenuOptions.START_GAME, MenuOptions.LOAD_GAME, MenuOptions.SETTINGS,MenuOptions.VISITOR, MenuOptions.EXIT]
         elif game_state == GameState.PAUSED:
             return [MenuOptions.RESUME, MenuOptions.SAVE_GAME, MenuOptions.SETTINGS, MenuOptions.EXIT]
         elif game_state == GameState.GAME_OVER:

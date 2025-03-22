@@ -486,3 +486,17 @@ class Map():
         # Méthode spéciale pour la désérialisation
         self.__dict__.update(state)
         self.__matrix = defaultdict(lambda: None, state['_Map__matrix'])
+
+    def get_resources(self) -> list:
+        """
+        Get all resources on the map.
+        
+        :return: List of resource objects
+        :rtype: list
+        """
+        resources = []
+        # Scan map for resources
+        for coord, obj in self.__matrix.items():
+            if obj is not None and isinstance(obj, Resource):
+                resources.append(obj)
+        return resources

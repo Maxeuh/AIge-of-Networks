@@ -59,6 +59,23 @@ class MenuController:
             self.start_game()
         elif option == MenuOptions.SAVE_GAME:
             self.save_game()  
+        elif option==MenuOptions.VISITOR:
+            self.start_game_visitor()
+        
+        
+    def start_game_visitor(self)->None:
+        """
+        Starts a new game in 'visitor' mode (no AI, no game threads, only map).
+        """    
+        self.state = GameState.NOT_STARTED
+        self.__game_controller = GameController(self, load=3)
+        
+        
+        
+              
+    
+    
+    
     
     def exit(self) -> None:
         """
