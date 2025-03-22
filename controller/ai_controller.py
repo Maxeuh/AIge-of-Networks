@@ -25,8 +25,8 @@ class AIController:
         self.__players: list[Player] = self.__game_controller.get_players()
         self.__refresh_rate: int = refresh_rate
         self.__running = True
-        for player in self.__players:
-            player.set_ai(AI(player, None, self.__game_controller.get_map().capture()))
+        #for player in self.__players:
+           # player.set_ai(AI(player, None, self.__game_controller.get_map().capture()))
 
     def exit(self) -> None:
         """
