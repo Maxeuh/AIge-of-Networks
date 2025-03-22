@@ -160,10 +160,10 @@ class Command(ABC):
     def __repr__(self):
         return f"{self.get_entity()} of {self.get_player()} at {self.get_entity().get_coordinate()} doing {self.get_process()}. Tick: {self.get_tick()}. ///"
 
-    def send_network(self, *args):
-        """
-        Sends the command to the network controller.
-        """
-        self.__network_controller.send(
-            f"{self.get_process()}{";" if args else ''}{';'.join(args)}"
-        )
+    def send_network(self, data):
+        """Sends command data over the network."""
+        print(f"[DEBUG] Command sending network data: {data[:50]}...")
+        # Format: "COMMAND_TYPE;{json_data}"
+        command_type = self.get_process().name
+        message = f"{command_type};{data}"
+        self.__network_controller.send(message)
