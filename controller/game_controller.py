@@ -70,8 +70,8 @@ class GameController:
             self.__view_controller = None
 
     def start_all_threads(self):
-        self.__game_thread = threading.Thread(target=self.game_loop())
-        self.__ai_thread = threading.Thread(target=self.__ai_controller.ai_loop())
+        self.__game_thread = threading.Thread(target=self.game_loop)
+        self.__ai_thread = threading.Thread(target=self.__ai_controller.ai_loop)
         self.__view_controller: ViewController = ViewController(self)
         self.__game_thread.start()
         self.__ai_thread.start()
@@ -395,7 +395,7 @@ class GameController:
         """
         for command in self.__command_list.copy():
             try:
-                # print(f"Command {command} is being executed")
+                #print(f"Command {command} is being executed")
                 command.run_command()
             except (ValueError, AttributeError):
                 # print(e)
@@ -416,15 +416,17 @@ class GameController:
             player.get_task_manager().execute_tasks()
 
     def game_loop(self) -> None:
-        """
-        The main game loop.
-        """
-        self.start()
-        while self.__running:
-            self.load_task()
-            self.update()
-            # Cap the loop time to ensure it doesn't run faster than the desired FPS
-            time.Clock().tick(self.settings.fps.value * self.get_speed())
+        try:
+            self.start()
+            while self.__running:
+                try:
+                    self.load_task()
+                    self.update()
+                    time.Clock().tick(self.settings.fps.value * self.get_speed())
+                except Exception as e:
+                    print(f"Error in game loop: {e}")
+        except Exception as e:
+            print(f"Fatal error in game loop: {e}")
 
     def resume(self) -> None:
         """
@@ -490,10 +492,15 @@ class GameController:
         
         # Add player data
         for player in self.__players:
+            # Convert resources to serializable format
+            resources_dict = {}
+            for resource, amount in player.get_resources().items():
+                resources_dict[resource.__class__.__name__] = amount
+                
             player_data = {
                 "name": player.get_name(),
                 "color": player.get_color(),
-                "resources": player.get_resources()
+                "resources": resources_dict  # Now using string keys
             }
             game_data["players"].append(player_data)
         
@@ -501,7 +508,7 @@ class GameController:
         for y in range(self.__map.get_size()):
             for x in range(self.__map.get_size()):
                 coord = Coordinate(x, y)
-                obj = self.__map.get_object(coord)
+                obj = self.__map.get(coord)
                 if obj:
                     obj_data = {
                         "type": obj.__class__.__name__,
