@@ -31,9 +31,9 @@ int main() {
     
     memset(&server_addr, 0, sizeof(server_addr));
     
-    // Configure server address
+    // Configure server address - changed to localhost only
     server_addr.sin_family = AF_INET;
-    server_addr.sin_addr.s_addr = INADDR_ANY;
+    server_addr.sin_addr.s_addr = inet_addr("127.0.0.1"); // Changed from INADDR_ANY to localhost
     server_addr.sin_port = htons(PORT);
     
     // Bind socket to address
@@ -50,7 +50,7 @@ int main() {
         exit(EXIT_FAILURE);
     }
     
-    printf("TCP server listening on port %d...\n", PORT);
+    printf("TCP server listening on 127.0.0.1:%d...\n", PORT);
     
     // Accept connection from client
     printf("Waiting for connection...\n");
@@ -71,7 +71,9 @@ int main() {
         memset(buffer, 0, BUFFER_SIZE);
         
         // Receive data
+        printf("Waiting to receive data...\n");
         int bytes_read = recv(client_sock, buffer, BUFFER_SIZE - 1, 0);
+        printf("bytes_read = %d\n", bytes_read);
         
         if (bytes_read <= 0) {
             if (bytes_read == 0) {
