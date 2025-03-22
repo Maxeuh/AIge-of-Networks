@@ -65,7 +65,7 @@ class CollectCommand(Command):
         """
         entity = self.get_entity()
         # Get resource type being collected
-        target_obj = self.get_interactions().get_map().get_object(self.__target_coord)
+        target_obj = self.get_interactions().get_map().get(self.__target_coord)
         resource_type = target_obj.__class__.__name__ if target_obj else "Unknown"
         
         command_data = {
