@@ -17,26 +17,26 @@ CFLAGS=-Wall -Wextra
 
 # Détection du système d'exploitation
 ifeq ($(OS),Windows_NT)
-    # Configuration pour Windows
-    CFLAGS += -D_WIN32
-    LDFLAGS=-lws2_32 -liphlpapi
-    EXE_EXT=.exe
-    RM=del /Q
+	# Configuration pour Windows
+	CFLAGS += -D_WIN32
+	LDFLAGS=-lws2_32 -liphlpapi
+	EXE_EXT=.exe
+	RM=del /Q
 else
-    # Configuration pour Unix/Linux/MacOS
-    CFLAGS += -pthread
-    LDFLAGS=
-    EXE_EXT=
-    RM=rm -f
+	# Configuration pour Unix/Linux/MacOS
+	CFLAGS += -pthread
+	LDFLAGS=
+	EXE_EXT=
+	RM=rm -f
 endif
 
 NETWORK_BRIDGE=network_bridge$(EXE_EXT)
 
 network_bridge: network_bridge.c
-    $(CC) $(CFLAGS) -o $(NETWORK_BRIDGE) network_bridge.c $(LDFLAGS)
+	$(CC) $(CFLAGS) -o $(NETWORK_BRIDGE) network_bridge.c $(LDFLAGS)
 
 clean_bridge:
-    $(RM) $(NETWORK_BRIDGE)
+	$(RM) $(NETWORK_BRIDGE)
 
 # Générer les fichiers .rst avec sphinx-apidoc
 apidoc:

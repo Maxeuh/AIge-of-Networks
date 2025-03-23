@@ -40,11 +40,12 @@ typedef int socket_t;
 typedef HANDLE thread_t;
 typedef DWORD WINAPI thread_func_t(LPVOID);
 #define THREAD_CREATE(thread, func, arg) \
-    *thread = CreateThread(NULL, 0, func, arg, 0, NULL)
+    ((*thread = CreateThread(NULL, 0, func, arg, 0, NULL)) == NULL)
 #define THREAD_JOIN(thread)                \
     WaitForSingleObject(thread, INFINITE); \
     CloseHandle(thread)
 #define THREAD_RETURN DWORD
+BOOL WINAPI CtrlHandler(DWORD fdwCtrlType);
 #else
 typedef pthread_t thread_t;
 typedef void *(*thread_func_t)(void *);
@@ -173,6 +174,7 @@ void get_broadcast_address(struct sockaddr_in *broadcast_addr)
 // Thread pour écouter les messages venant de Python
 THREAD_RETURN listen_from_python(void *arg)
 {
+    (void)arg;
     char buffer[BUFFER_SIZE];
     struct sockaddr_in client_addr;
     socklen_t client_len = sizeof(client_addr);
@@ -221,6 +223,7 @@ THREAD_RETURN listen_from_python(void *arg)
 // Thread pour écouter les messages du réseau
 THREAD_RETURN listen_from_network(void *arg)
 {
+    (void)arg;
     char buffer[BUFFER_SIZE];
     struct sockaddr_in sender_addr;
     socklen_t sender_len = sizeof(sender_addr);
@@ -419,7 +422,7 @@ int main()
     if (THREAD_CREATE(&python_thread, listen_from_python, NULL) != 0)
     {
 #if IS_WINDOWS
-        fprintf(stderr, "Impossible de créer le thread d'écoute Python (Erreur: %d)\n", GetLastError());
+        fprintf(stderr, "Impossible de créer le thread d'écoute Python (Erreur: %lu)\n", GetLastError());
         CLOSE_SOCKET(state.local_socket);
         CLOSE_SOCKET(state.broadcast_socket);
         WSACleanup();
@@ -434,7 +437,7 @@ int main()
     if (THREAD_CREATE(&network_thread, listen_from_network, NULL) != 0)
     {
 #if IS_WINDOWS
-        fprintf(stderr, "Impossible de créer le thread d'écoute réseau (Erreur: %d)\n", GetLastError());
+        fprintf(stderr, "Impossible de créer le thread d'écoute réseau (Erreur: %lu)\n", GetLastError());
         state.running = 0;
         THREAD_JOIN(python_thread);
         CLOSE_SOCKET(state.local_socket);
