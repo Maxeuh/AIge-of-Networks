@@ -32,8 +32,7 @@ typedef int socket_t;
 
 #define LOCAL_PORT 9090
 #define BROADCAST_PORT 9091
-#define BUFFER_SIZE 1024
-
+#define BUFFER_SIZE 65507
 int is_debug = 1;
 
 // Structures et types pour les threads (cross-platform)
@@ -203,7 +202,8 @@ THREAD_RETURN listen_from_python(void *arg)
             buffer[received_bytes] = '\0';
 
             // Ajouter l'ID de la machine au message
-            char tagged_buffer[BUFFER_SIZE + 50];
+            // Augmentation de la taille pour éviter la troncature
+            char tagged_buffer[BUFFER_SIZE + 100]; // Ajout de 100 octets au lieu de 50
             snprintf(tagged_buffer, sizeof(tagged_buffer), "{\"bridge_id\":\"%s\",\"data\":%s}",
                      state.machine_id, buffer);
 
@@ -314,6 +314,7 @@ THREAD_RETURN listen_from_network(void *arg)
 // Gestionnaire de signal pour arrêt propre (Unix uniquement)
 void signal_handler(int signal)
 {
+    (void)signal;
     if (is_debug)
     {
         printf("\nSignal de terminaison reçu. Nettoyage...\n");
