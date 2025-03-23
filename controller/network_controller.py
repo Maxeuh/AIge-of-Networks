@@ -53,7 +53,7 @@ class NetworkController:
             try:
                 self.__sock.connect(self.__address)
                 self.__connected = True
-                print(f"Connected to relay at {self.__address[0]}:{self.__address[1]}")
+                #print(f"Connected to relay at {self.__address[0]}:{self.__address[1]}")
                 return True
             except Exception as e:
                 print(f"TCP connection failed: {e}")
@@ -81,7 +81,7 @@ class NetworkController:
             # Send the actual message data
             self.__sock.sendall(data)
             
-            print(f"Sent {message_len} bytes via TCP")
+            #print(f"Sent {message_len} bytes via TCP")
         except Exception as e:
             print(f"Error sending TCP message: {e}")
             self.__connected = False
@@ -104,7 +104,7 @@ class NetworkController:
         except:
             pass
             
-        print(f"Listening for broadcasts on port 9091, own IPs: {own_ips}")
+        #print(f"Listening for broadcasts on port 9091, own IPs: {own_ips}")
         
         while self.__running:
             try:
@@ -115,7 +115,7 @@ class NetworkController:
                         continue
                         
                     decoded_data = data.decode()
-                    print(f"Received broadcast from {addr[0]}:{addr[1]}, {len(decoded_data)} bytes")
+                    #print(f"Received broadcast from {addr[0]}:{addr[1]}, {len(decoded_data)} bytes")
                     
                     # Add to received data queue
                     self.__received_data.append(decoded_data)
