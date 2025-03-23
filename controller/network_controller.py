@@ -1,5 +1,8 @@
 import socket
 import threading
+import subprocess
+import os
+import atexit
 
 
 class NetworkController:
@@ -17,6 +20,55 @@ class NetworkController:
         self.__listening = False
         self.__listener_thread = None
         self.__message_list = []
+        self.__network_bridge_process = None
+        self.__bridge_exists = True
+
+        # Démarrer le pont réseau
+        self.__start_network_bridge()
+
+        # S'assurer que le pont réseau est arrêté quand le programme termine
+        atexit.register(self.__stop_network_bridge)
+
+    def __start_network_bridge(self) -> None:
+        """
+        Démarre le programme C qui fait office de pont réseau.
+        """
+        try:
+            # Chemin vers l'exécutable du pont réseau
+            bridge_path = os.path.join(
+                os.path.dirname(os.path.dirname(__file__)),
+                "network_bridge.exe" if os.name == "nt" else "network_bridge",
+            )
+            if not os.path.isfile(bridge_path):
+                self.__bridge_exists = False
+                subprocess.run(
+                    ["make", "network_bridge"],
+                    cwd=os.path.dirname(os.path.dirname(__file__)),
+                )
+            self.__network_bridge_process = subprocess.Popen([bridge_path])
+        except Exception as e:
+            self.__network_bridge_process = None
+            raise e
+
+    def __stop_network_bridge(self) -> None:
+        """
+        Arrête le programme C du pont réseau.
+        """
+        if self.__network_bridge_process is not None:
+            try:
+                self.__network_bridge_process.terminate()
+                self.__network_bridge_process.wait(timeout=3)
+            except subprocess.TimeoutExpired:
+                self.__network_bridge_process.kill()
+            except Exception as e:
+                raise e
+            finally:
+                self.__network_bridge_process = None
+                if not self.__bridge_exists:
+                    subprocess.run(
+                        ["make", "clean_bridge"],
+                        cwd=os.path.dirname(os.path.dirname(__file__)),
+                    )
 
     def send(self, message: str) -> None:
         """
@@ -34,10 +86,12 @@ class NetworkController:
 
     def close(self) -> None:
         """
-        Closes the socket.
+        Closes the socket and stops the network bridge.
         """
+        self.__stop_network_bridge()
         self.__sock.close()
 
+    # ...existing code...
     def start_listening(self) -> None:
         """
         Starts listening for incoming messages in a separate thread.
