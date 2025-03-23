@@ -24,35 +24,22 @@ typedef int socklen_t;
 #include <netinet/in.h>
 #include <ifaddrs.h>
 #include <signal.h>
-#include <pthread.h>
+#include <sys/select.h>
 typedef int socket_t;
 #define SOCKET_ERROR_VALUE -1
 #define CLOSE_SOCKET(s) close(s)
 #endif
 
-#define LOCAL_PORT 9090
-#define BROADCAST_PORT 9091
-#define BUFFER_SIZE 65507
-int is_debug = 1;
+// Définition des ports
+#define LOCAL_PORT 9090     // Port pour recevoir les données de Python
+#define BROADCAST_PORT 9091 // Port pour le broadcast sur le réseau
+#define PYTHON_PORT 9092    // Port pour renvoyer les données à Python
 
-// Structures et types pour les threads (cross-platform)
-#if IS_WINDOWS
-typedef HANDLE thread_t;
-typedef DWORD WINAPI thread_func_t(LPVOID);
-#define THREAD_CREATE(thread, func, arg) \
-    ((*thread = CreateThread(NULL, 0, func, arg, 0, NULL)) == NULL)
-#define THREAD_JOIN(thread)                \
-    WaitForSingleObject(thread, INFINITE); \
-    CloseHandle(thread)
-#define THREAD_RETURN DWORD
-BOOL WINAPI CtrlHandler(DWORD fdwCtrlType);
-#else
-typedef pthread_t thread_t;
-typedef void *(*thread_func_t)(void *);
-#define THREAD_CREATE(thread, func, arg) pthread_create(thread, NULL, func, arg)
-#define THREAD_JOIN(thread) pthread_join(thread, NULL)
-#define THREAD_RETURN void *
-#endif
+// Taille du tampon pour les messages
+#define BUFFER_SIZE 65507
+
+// Mode de débogage
+int is_debug = 1;
 
 typedef struct
 {
@@ -65,11 +52,16 @@ typedef struct
 
 NetworkState state;
 
+#if IS_WINDOWS
+// Gestionnaire d'événements pour Windows
+BOOL WINAPI CtrlHandler(DWORD fdwCtrlType);
+#endif
+
 // Fonction pour déterminer l'adresse broadcast du réseau
 void get_broadcast_address(struct sockaddr_in *broadcast_addr)
 {
+// Implémentation Windows pour obtenir l'adresse de broadcast
 #if IS_WINDOWS
-    // Implémentation Windows pour obtenir l'adresse de broadcast
     PIP_ADAPTER_INFO pAdapterInfo = NULL;
     PIP_ADAPTER_INFO pAdapter = NULL;
     DWORD dwRetVal = 0;
@@ -117,16 +109,9 @@ void get_broadcast_address(struct sockaddr_in *broadcast_addr)
                         inet_ntop(AF_INET, &ipaddr, ip_str, INET_ADDRSTRLEN);
                         inet_ntop(AF_INET, &broadcast.s_addr, broadcast_str, INET_ADDRSTRLEN);
 
-                        printf("**********************************\n");
-                        printf("* AIge of Networks - Pont réseau *\n");
-                        printf("**********************************\n");
-                        printf("----------------------------------\n");
-                        printf("Interface réseau: %s\n", pAdapter->Description);
-                        printf("Adresse IP: %s\n", ip_str);
-                        printf("Adresse de broadcast: %s\n", broadcast_str);
-                        printf("----------------------------------\n");
-                        printf("Machine ID: %s\n", state.machine_id);
-                        printf("----------------------------------\n");
+                        // Stockez les informations pour affichage ultérieur
+                        strncpy(pAdapter->Description, "Adapter Description", sizeof(pAdapter->Description));
+                        // Les autres informations sont déjà dans broadcast_addr
                     }
 
                     // Utiliser le premier adaptateur non-loopback
@@ -176,137 +161,6 @@ void get_broadcast_address(struct sockaddr_in *broadcast_addr)
         }
     }
     freeifaddrs(ifap);
-#endif
-}
-
-// Thread pour écouter les messages venant de Python
-THREAD_RETURN listen_from_python(void *arg)
-{
-    (void)arg;
-    char buffer[BUFFER_SIZE];
-    struct sockaddr_in client_addr;
-    socklen_t client_len = sizeof(client_addr);
-    int received_bytes;
-
-    if (is_debug)
-    {
-        printf("Écoute des messages de Python sur %s:%d\n", inet_ntoa(client_addr.sin_addr), LOCAL_PORT);
-    }
-
-    while (state.running)
-    {
-        received_bytes = recvfrom(state.local_socket, buffer, BUFFER_SIZE - 1, 0,
-                                  (struct sockaddr *)&client_addr, &client_len);
-        if (received_bytes > 0)
-        {
-            buffer[received_bytes] = '\0';
-
-            // Ajouter l'ID de la machine au message
-            // Augmentation de la taille pour éviter la troncature
-            char tagged_buffer[BUFFER_SIZE + 100]; // Ajout de 100 octets au lieu de 50
-            snprintf(tagged_buffer, sizeof(tagged_buffer), "{\"bridge_id\":\"%s\",\"data\":%s}",
-                     state.machine_id, buffer);
-
-            if (is_debug)
-            {
-                printf("Reçu de Python: %s\n", buffer);
-            }
-
-            // Diffuser le message modifié sur le réseau
-            sendto(state.broadcast_socket, tagged_buffer, strlen(tagged_buffer), 0,
-                   (struct sockaddr *)&state.broadcast_addr, sizeof(state.broadcast_addr));
-
-            if (is_debug)
-            {
-                printf("Message diffusé sur le réseau\n");
-            }
-        }
-#if IS_WINDOWS
-        // Petite pause pour éviter de consommer trop de CPU sur Windows
-        Sleep(10);
-#else
-        // Petite pause pour éviter de consommer trop de CPU sur Unix
-        usleep(10000);
-#endif
-    }
-#if IS_WINDOWS
-    return 0;
-#else
-    return NULL;
-#endif
-}
-
-// Thread pour écouter les messages du réseau
-THREAD_RETURN listen_from_network(void *arg)
-{
-    (void)arg;
-    char buffer[BUFFER_SIZE];
-    struct sockaddr_in sender_addr;
-    socklen_t sender_len = sizeof(sender_addr);
-    int received_bytes;
-    struct sockaddr_in python_addr;
-
-    // Configurer l'adresse du jeu Python local
-    memset(&python_addr, 0, sizeof(python_addr));
-    python_addr.sin_family = AF_INET;
-    python_addr.sin_addr.s_addr = inet_addr("127.0.0.1");
-    python_addr.sin_port = htons(LOCAL_PORT);
-
-    if (is_debug)
-    {
-        printf("Écoute des messages broadcast sur %s:%d\n", inet_ntoa(state.broadcast_addr.sin_addr), BROADCAST_PORT);
-    }
-
-    while (state.running)
-    {
-        received_bytes = recvfrom(state.broadcast_socket, buffer, BUFFER_SIZE - 1, 0,
-                                  (struct sockaddr *)&sender_addr, &sender_len);
-        if (received_bytes > 0)
-        {
-            buffer[received_bytes] = '\0';
-
-            // Vérifier si le message contient notre ID (envoyé par nous-même)
-            if (strstr(buffer, state.machine_id) == NULL)
-            {
-                if (is_debug)
-                {
-                    printf("Reçu du réseau (%s): %s\n",
-                           inet_ntoa(sender_addr.sin_addr), buffer);
-                }
-
-                // Extraire les données du message pour Python (enlever notre wrapper)
-                char *data_start = strstr(buffer, "\"data\":");
-                if (data_start)
-                {
-                    data_start += 7; // Dépasser "data":
-
-                    // Transmettre seulement les données au jeu Python
-                    sendto(state.local_socket, data_start, strlen(data_start), 0,
-                           (struct sockaddr *)&python_addr, sizeof(python_addr));
-
-                    if (is_debug)
-                    {
-                        printf("Message transmis à Python\n");
-                    }
-                }
-            }
-            else if (is_debug)
-            {
-                printf("Message ignoré (envoyé par nous-même)\n");
-            }
-        }
-#if IS_WINDOWS
-        // Petite pause pour éviter de consommer trop de CPU sur Windows
-        Sleep(10);
-#else
-        // Petite pause pour éviter de consommer trop de CPU sur Unix
-        usleep(10000);
-#endif
-    }
-#if IS_WINDOWS
-    return 0;
-#else
-    return NULL;
 #endif
 }
 
@@ -364,8 +218,7 @@ int main(int argc, char *argv[])
     signal(SIGTERM, signal_handler);
 #endif
 
-    thread_t python_thread, network_thread;
-    struct sockaddr_in local_addr, broadcast_receiver_addr;
+    struct sockaddr_in local_addr, broadcast_receiver_addr, python_addr;
     int broadcast_enable = 1;
 
     // Initialiser l'état
@@ -375,11 +228,9 @@ int main(int argc, char *argv[])
     state.local_socket = socket(AF_INET, SOCK_DGRAM, 0);
     if (state.local_socket == SOCKET_ERROR_VALUE)
     {
-#if IS_WINDOWS
-        fprintf(stderr, "Impossible de créer le socket local (Erreur: %d)\n", WSAGetLastError());
-        WSACleanup();
-#else
         perror("Impossible de créer le socket local");
+#if IS_WINDOWS
+        WSACleanup();
 #endif
         return 1;
     }
@@ -393,13 +244,10 @@ int main(int argc, char *argv[])
     // Lier le socket local
     if (bind(state.local_socket, (struct sockaddr *)&local_addr, sizeof(local_addr)) < 0)
     {
-#if IS_WINDOWS
-        fprintf(stderr, "Impossible de lier le socket local (Erreur: %d)\n", WSAGetLastError());
-        CLOSE_SOCKET(state.local_socket);
-        WSACleanup();
-#else
         perror("Impossible de lier le socket local");
         CLOSE_SOCKET(state.local_socket);
+#if IS_WINDOWS
+        WSACleanup();
 #endif
         return 1;
     }
@@ -408,13 +256,10 @@ int main(int argc, char *argv[])
     state.broadcast_socket = socket(AF_INET, SOCK_DGRAM, 0);
     if (state.broadcast_socket == SOCKET_ERROR_VALUE)
     {
-#if IS_WINDOWS
-        fprintf(stderr, "Impossible de créer le socket broadcast (Erreur: %d)\n", WSAGetLastError());
-        CLOSE_SOCKET(state.local_socket);
-        WSACleanup();
-#else
         perror("Impossible de créer le socket broadcast");
         CLOSE_SOCKET(state.local_socket);
+#if IS_WINDOWS
+        WSACleanup();
 #endif
         return 1;
     }
@@ -423,15 +268,11 @@ int main(int argc, char *argv[])
     if (setsockopt(state.broadcast_socket, SOL_SOCKET, SO_BROADCAST,
                    (char *)&broadcast_enable, sizeof(broadcast_enable)) < 0)
     {
-#if IS_WINDOWS
-        fprintf(stderr, "Impossible de configurer les options du socket (Erreur: %d)\n", WSAGetLastError());
-        CLOSE_SOCKET(state.local_socket);
-        CLOSE_SOCKET(state.broadcast_socket);
-        WSACleanup();
-#else
         perror("Impossible de configurer les options du socket");
         CLOSE_SOCKET(state.local_socket);
         CLOSE_SOCKET(state.broadcast_socket);
+#if IS_WINDOWS
+        WSACleanup();
 #endif
         return 1;
     }
@@ -446,15 +287,11 @@ int main(int argc, char *argv[])
     if (bind(state.broadcast_socket, (struct sockaddr *)&broadcast_receiver_addr,
              sizeof(broadcast_receiver_addr)) < 0)
     {
-#if IS_WINDOWS
-        fprintf(stderr, "Impossible de lier le socket broadcast (Erreur: %d)\n", WSAGetLastError());
-        CLOSE_SOCKET(state.local_socket);
-        CLOSE_SOCKET(state.broadcast_socket);
-        WSACleanup();
-#else
         perror("Impossible de lier le socket broadcast");
         CLOSE_SOCKET(state.local_socket);
         CLOSE_SOCKET(state.broadcast_socket);
+#if IS_WINDOWS
+        WSACleanup();
 #endif
         return 1;
     }
@@ -471,56 +308,112 @@ int main(int argc, char *argv[])
         printf("* AIge of Networks - Pont réseau *\n");
         printf("**********************************\n");
         printf("----------------------------------\n");
-        printf("Interface réseau: %s\n", inet_ntoa(state.broadcast_addr.sin_addr));
-        printf("Adresse de broadcast: %s\n", inet_ntoa(state.broadcast_addr.sin_addr));
+        printf("Adresse de réception : %s:%d\n", inet_ntoa(local_addr.sin_addr), LOCAL_PORT);
+        printf("Adresse de broadcast : %s:%d\n", inet_ntoa(state.broadcast_addr.sin_addr), BROADCAST_PORT);
+        printf("Adresse d'envoi : %s:%d\n", inet_ntoa(python_addr.sin_addr), PYTHON_PORT);
         printf("----------------------------------\n");
         printf("Machine ID: %s\n", state.machine_id);
         printf("----------------------------------\n");
     }
 
-    // Démarrer les threads d'écoute
-    if (THREAD_CREATE(&python_thread, listen_from_python, NULL) != 0)
-    {
-#if IS_WINDOWS
-        fprintf(stderr, "Impossible de créer le thread d'écoute Python (Erreur: %lu)\n", GetLastError());
-        CLOSE_SOCKET(state.local_socket);
-        CLOSE_SOCKET(state.broadcast_socket);
-        WSACleanup();
-#else
-        perror("Impossible de créer le thread d'écoute Python");
-        CLOSE_SOCKET(state.local_socket);
-        CLOSE_SOCKET(state.broadcast_socket);
-#endif
-        return 1;
-    }
+    // Configurer l'adresse du jeu Python local
+    memset(&python_addr, 0, sizeof(python_addr));
+    python_addr.sin_family = AF_INET;
+    python_addr.sin_addr.s_addr = inet_addr("127.0.0.1");
+    python_addr.sin_port = htons(PYTHON_PORT);
 
-    if (THREAD_CREATE(&network_thread, listen_from_network, NULL) != 0)
-    {
-#if IS_WINDOWS
-        fprintf(stderr, "Impossible de créer le thread d'écoute réseau (Erreur: %lu)\n", GetLastError());
-        state.running = 0;
-        THREAD_JOIN(python_thread);
-        CLOSE_SOCKET(state.local_socket);
-        CLOSE_SOCKET(state.broadcast_socket);
-        WSACleanup();
-#else
-        perror("Impossible de créer le thread d'écoute réseau");
-        state.running = 0;
-        THREAD_JOIN(python_thread);
-        CLOSE_SOCKET(state.local_socket);
-        CLOSE_SOCKET(state.broadcast_socket);
-#endif
-        return 1;
-    }
+    fd_set read_fds;
+    int max_fd = (state.local_socket > state.broadcast_socket) ? state.local_socket : state.broadcast_socket;
 
-    if (is_debug)
+    while (state.running)
     {
-        printf("Pont réseau en fonctionnement. Appuyez sur Ctrl+C pour arrêter.\n");
-    }
+        FD_ZERO(&read_fds);
+        FD_SET(state.local_socket, &read_fds);
+        FD_SET(state.broadcast_socket, &read_fds);
 
-    // Attendre que les threads se terminent
-    THREAD_JOIN(python_thread);
-    THREAD_JOIN(network_thread);
+        int activity = select(max_fd + 1, &read_fds, NULL, NULL, NULL);
+
+        if (activity < 0)
+        {
+            perror("select error");
+            break;
+        }
+
+        if (FD_ISSET(state.local_socket, &read_fds))
+        {
+            char buffer[BUFFER_SIZE];
+            struct sockaddr_in client_addr;
+            socklen_t client_len = sizeof(client_addr);
+            int received_bytes = recvfrom(state.local_socket, buffer, BUFFER_SIZE - 1, 0,
+                                          (struct sockaddr *)&client_addr, &client_len);
+            if (received_bytes > 0)
+            {
+                buffer[received_bytes] = '\0';
+
+                // Ajouter l'ID de la machine au message
+                char tagged_buffer[BUFFER_SIZE + 100];
+                snprintf(tagged_buffer, sizeof(tagged_buffer), "{\"bridge_id\":\"%s\",\"data\":%s}",
+                         state.machine_id, buffer);
+
+                if (is_debug)
+                {
+                    printf("Reçu de Python: %s\n", buffer);
+                }
+
+                // Diffuser le message modifié sur le réseau
+                sendto(state.broadcast_socket, tagged_buffer, strlen(tagged_buffer), 0,
+                       (struct sockaddr *)&state.broadcast_addr, sizeof(state.broadcast_addr));
+
+                if (is_debug)
+                {
+                    printf("Message diffusé sur le réseau\n");
+                }
+            }
+        }
+
+        if (FD_ISSET(state.broadcast_socket, &read_fds))
+        {
+            char buffer[BUFFER_SIZE];
+            struct sockaddr_in sender_addr;
+            socklen_t sender_len = sizeof(sender_addr);
+            int received_bytes = recvfrom(state.broadcast_socket, buffer, BUFFER_SIZE - 1, 0,
+                                          (struct sockaddr *)&sender_addr, &sender_len);
+            if (received_bytes > 0)
+            {
+                buffer[received_bytes] = '\0';
+
+                // Vérifier si le message contient notre ID (envoyé par nous-même)
+                if (strstr(buffer, state.machine_id) == NULL)
+                {
+                    if (is_debug)
+                    {
+                        printf("Reçu du réseau (%s): %s\n",
+                               inet_ntoa(sender_addr.sin_addr), buffer);
+                    }
+
+                    // Extraire les données du message pour Python (enlever notre wrapper)
+                    char *data_start = strstr(buffer, "\"data\":");
+                    if (data_start)
+                    {
+                        data_start += 7; // Dépasser "data":
+
+                        // Transmettre seulement les données au jeu Python
+                        sendto(state.local_socket, data_start, strlen(data_start), 0,
+                               (struct sockaddr *)&python_addr, sizeof(python_addr));
+
+                        if (is_debug)
+                        {
+                            printf("Message transmis à Python\n");
+                        }
+                    }
+                }
+                else if (is_debug)
+                {
+                    printf("Message ignoré (envoyé par nous-même)\n");
+                }
+            }
+        }
+    }
 
     // Nettoyer les ressources
     CLOSE_SOCKET(state.local_socket);
@@ -553,6 +446,21 @@ BOOL WINAPI CtrlHandler(DWORD fdwCtrlType)
             printf("\nSignal de terminaison reçu. Nettoyage...\n");
         }
         state.running = 0;
+
+        // Forcer le réveil de select() en fermant les sockets
+        if (state.local_socket != SOCKET_ERROR_VALUE)
+        {
+            CLOSE_SOCKET(state.local_socket);
+            state.local_socket = SOCKET_ERROR_VALUE;
+        }
+
+        if (state.broadcast_socket != SOCKET_ERROR_VALUE)
+        {
+            CLOSE_SOCKET(state.broadcast_socket);
+            state.broadcast_socket = SOCKET_ERROR_VALUE;
+        }
+
+        // Indiquer que nous avons géré l'événement
         return TRUE;
     default:
         return FALSE;

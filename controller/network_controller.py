@@ -10,13 +10,18 @@ class NetworkController:
     The goal of this class is to provide a way to interact with the other
     players on the network, by sending and receiving messages.
     This class sends messages locally to the C program that runs with the
-    game, and receives messages from it, using UDP sockets and the port 9090.
+    game, and receives messages from it, using UDP sockets.
+    Port 9090 is used for sending messages, and port 9092 is used for
+    receiving messages.
     """
 
     def __init__(self) -> None:
-        self.__sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        self.__address = ("127.0.0.1", 9090)
-        self.__sock.settimeout(1.0)
+        self.__send_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        self.__recv_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        self.__send_address = ("127.0.0.1", 9090)
+        self.__recv_address = ("127.0.0.1", 9092)
+        self.__recv_sock.bind(self.__recv_address)
+        self.__recv_sock.settimeout(1.0)
         self.__listening = False
         self.__listener_thread = None
         self.__message_list = []
@@ -78,7 +83,7 @@ class NetworkController:
         """
         Sends a message to the C program that runs the game.
         """
-        self.__sock.sendto(message.encode(), self.__address)
+        self.__send_sock.sendto(message.encode(), self.__send_address)
 
     def receive(self) -> list:
         """
@@ -93,7 +98,7 @@ class NetworkController:
         Closes the socket and stops the network bridge.
         """
         self.__stop_network_bridge()
-        self.__sock.close()
+        self.__recv_sock.close()
 
     def start_listening(self) -> None:
         """
@@ -125,7 +130,7 @@ class NetworkController:
         Receives a single message from the C program that runs the game.
         """
         try:
-            data, _ = self.__sock.recvfrom(1024)
+            data, _ = self.__recv_sock.recvfrom(1024)
             return data.decode()
         except socket.timeout:
             return ""
