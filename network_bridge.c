@@ -33,10 +33,8 @@ typedef int socket_t;
 #define LOCAL_PORT 9090
 #define BROADCAST_PORT 9091
 #define BUFFER_SIZE 1024
-// Pour afficher les messages de débogage, définir DEBUG_MODE à 1. Sinon, définir à 0.
-#ifndef DEBUG_MODE
-#define DEBUG_MODE 1
-#endif
+
+int is_debug = 1;
 
 // Structures et types pour les threads (cross-platform)
 #if IS_WINDOWS
@@ -112,7 +110,7 @@ void get_broadcast_address(struct sockaddr_in *broadcast_addr)
                     broadcast_addr->sin_addr.s_addr = broadcast.s_addr;
                     broadcast_addr->sin_port = htons(BROADCAST_PORT);
 
-                    if (DEBUG_MODE)
+                    if (is_debug)
                     {
                         char ip_str[INET_ADDRSTRLEN];
                         char broadcast_str[INET_ADDRSTRLEN];
@@ -167,7 +165,7 @@ void get_broadcast_address(struct sockaddr_in *broadcast_addr)
             broadcast_addr->sin_family = AF_INET;
             broadcast_addr->sin_port = htons(BROADCAST_PORT);
 
-            if (DEBUG_MODE)
+            if (is_debug)
             {
                 printf("Interface réseau: %s\n", ifa->ifa_name);
                 printf("Adresse IP: %s\n", inet_ntoa(sa->sin_addr));
@@ -191,7 +189,7 @@ THREAD_RETURN listen_from_python(void *arg)
     socklen_t client_len = sizeof(client_addr);
     int received_bytes;
 
-    if (DEBUG_MODE)
+    if (is_debug)
     {
         printf("Écoute des messages de Python sur %s:%d\n", inet_ntoa(client_addr.sin_addr), LOCAL_PORT);
     }
@@ -209,7 +207,7 @@ THREAD_RETURN listen_from_python(void *arg)
             snprintf(tagged_buffer, sizeof(tagged_buffer), "{\"bridge_id\":\"%s\",\"data\":%s}",
                      state.machine_id, buffer);
 
-            if (DEBUG_MODE)
+            if (is_debug)
             {
                 printf("Reçu de Python: %s\n", buffer);
             }
@@ -218,7 +216,7 @@ THREAD_RETURN listen_from_python(void *arg)
             sendto(state.broadcast_socket, tagged_buffer, strlen(tagged_buffer), 0,
                    (struct sockaddr *)&state.broadcast_addr, sizeof(state.broadcast_addr));
 
-            if (DEBUG_MODE)
+            if (is_debug)
             {
                 printf("Message diffusé sur le réseau\n");
             }
@@ -254,7 +252,7 @@ THREAD_RETURN listen_from_network(void *arg)
     python_addr.sin_addr.s_addr = inet_addr("127.0.0.1");
     python_addr.sin_port = htons(LOCAL_PORT);
 
-    if (DEBUG_MODE)
+    if (is_debug)
     {
         printf("Écoute des messages broadcast sur %s:%d\n", inet_ntoa(state.broadcast_addr.sin_addr), BROADCAST_PORT);
     }
@@ -270,7 +268,7 @@ THREAD_RETURN listen_from_network(void *arg)
             // Vérifier si le message contient notre ID (envoyé par nous-même)
             if (strstr(buffer, state.machine_id) == NULL)
             {
-                if (DEBUG_MODE)
+                if (is_debug)
                 {
                     printf("Reçu du réseau (%s): %s\n",
                            inet_ntoa(sender_addr.sin_addr), buffer);
@@ -286,13 +284,13 @@ THREAD_RETURN listen_from_network(void *arg)
                     sendto(state.local_socket, data_start, strlen(data_start), 0,
                            (struct sockaddr *)&python_addr, sizeof(python_addr));
 
-                    if (DEBUG_MODE)
+                    if (is_debug)
                     {
                         printf("Message transmis à Python\n");
                     }
                 }
             }
-            else if (DEBUG_MODE)
+            else if (is_debug)
             {
                 printf("Message ignoré (envoyé par nous-même)\n");
             }
@@ -316,7 +314,7 @@ THREAD_RETURN listen_from_network(void *arg)
 // Gestionnaire de signal pour arrêt propre (Unix uniquement)
 void signal_handler(int signal)
 {
-    if (DEBUG_MODE)
+    if (is_debug)
     {
         printf("\nSignal de terminaison reçu. Nettoyage...\n");
     }
@@ -338,8 +336,7 @@ int main(int argc, char *argv[])
     {
         if (strcmp(argv[i], "--no-debug") == 0)
         {
-#undef DEBUG_MODE
-#define DEBUG_MODE 0
+            is_debug = 0;
         }
     }
 
@@ -467,7 +464,7 @@ int main(int argc, char *argv[])
     // Obtenir l'adresse broadcast
     get_broadcast_address(&state.broadcast_addr);
 
-    if (DEBUG_MODE)
+    if (is_debug)
     {
         printf("**********************************\n");
         printf("* AIge of Networks - Pont réseau *\n");
@@ -515,7 +512,7 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-    if (DEBUG_MODE)
+    if (is_debug)
     {
         printf("Pont réseau en fonctionnement. Appuyez sur Ctrl+C pour arrêter.\n");
     }
@@ -532,7 +529,7 @@ int main(int argc, char *argv[])
     WSACleanup();
 #endif
 
-    if (DEBUG_MODE)
+    if (is_debug)
     {
         printf("Pont réseau arrêté.\n");
     }
@@ -550,7 +547,7 @@ BOOL WINAPI CtrlHandler(DWORD fdwCtrlType)
     case CTRL_BREAK_EVENT:
     case CTRL_LOGOFF_EVENT:
     case CTRL_SHUTDOWN_EVENT:
-        if (DEBUG_MODE)
+        if (is_debug)
         {
             printf("\nSignal de terminaison reçu. Nettoyage...\n");
         }
