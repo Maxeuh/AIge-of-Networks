@@ -28,6 +28,7 @@ class NetworkController:
 
         # S'assurer que le pont réseau est arrêté quand le programme termine
         atexit.register(self.__stop_network_bridge)
+        self.start_listening()
 
     def __start_network_bridge(self) -> None:
         """
@@ -45,7 +46,10 @@ class NetworkController:
                     ["make", "network_bridge"],
                     cwd=os.path.dirname(os.path.dirname(__file__)),
                 )
-            self.__network_bridge_process = subprocess.Popen([bridge_path])
+            # Ajouter l'argument --no-debug
+            self.__network_bridge_process = subprocess.Popen(
+                [bridge_path, "--no-debug"]
+            )
         except Exception as e:
             self.__network_bridge_process = None
             raise e
@@ -91,7 +95,6 @@ class NetworkController:
         self.__stop_network_bridge()
         self.__sock.close()
 
-    # ...existing code...
     def start_listening(self) -> None:
         """
         Starts listening for incoming messages in a separate thread.
@@ -125,6 +128,8 @@ class NetworkController:
             data, _ = self.__sock.recvfrom(1024)
             return data.decode()
         except socket.timeout:
+            return ""
+        except ConnectionResetError:
             return ""
 
     def __process_message(self, message: str) -> None:

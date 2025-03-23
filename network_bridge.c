@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 
 // Détection du système d'exploitation
 #if defined(_WIN32) || defined(_WIN64)
@@ -33,7 +34,9 @@ typedef int socket_t;
 #define BROADCAST_PORT 9091
 #define BUFFER_SIZE 1024
 // Pour afficher les messages de débogage, définir DEBUG_MODE à 1. Sinon, définir à 0.
-#define DEBUG_MODE 0
+#ifndef DEBUG_MODE
+#define DEBUG_MODE 1
+#endif
 
 // Structures et types pour les threads (cross-platform)
 #if IS_WINDOWS
@@ -60,6 +63,7 @@ typedef struct
     socket_t broadcast_socket;
     int running;
     struct sockaddr_in broadcast_addr;
+    char machine_id[37]; // UUID pour identifier cette machine
 } NetworkState;
 
 NetworkState state;
@@ -116,9 +120,16 @@ void get_broadcast_address(struct sockaddr_in *broadcast_addr)
                         inet_ntop(AF_INET, &ipaddr, ip_str, INET_ADDRSTRLEN);
                         inet_ntop(AF_INET, &broadcast.s_addr, broadcast_str, INET_ADDRSTRLEN);
 
+                        printf("**********************************\n");
+                        printf("* AIge of Networks - Pont réseau *\n");
+                        printf("**********************************\n");
+                        printf("----------------------------------\n");
                         printf("Interface réseau: %s\n", pAdapter->Description);
                         printf("Adresse IP: %s\n", ip_str);
                         printf("Adresse de broadcast: %s\n", broadcast_str);
+                        printf("----------------------------------\n");
+                        printf("Machine ID: %s\n", state.machine_id);
+                        printf("----------------------------------\n");
                     }
 
                     // Utiliser le premier adaptateur non-loopback
@@ -182,7 +193,7 @@ THREAD_RETURN listen_from_python(void *arg)
 
     if (DEBUG_MODE)
     {
-        printf("Écoute des messages de Python sur 127.0.0.1:%d\n", LOCAL_PORT);
+        printf("Écoute des messages de Python sur %s:%d\n", inet_ntoa(client_addr.sin_addr), LOCAL_PORT);
     }
 
     while (state.running)
@@ -192,14 +203,21 @@ THREAD_RETURN listen_from_python(void *arg)
         if (received_bytes > 0)
         {
             buffer[received_bytes] = '\0';
+
+            // Ajouter l'ID de la machine au message
+            char tagged_buffer[BUFFER_SIZE + 50];
+            snprintf(tagged_buffer, sizeof(tagged_buffer), "{\"bridge_id\":\"%s\",\"data\":%s}",
+                     state.machine_id, buffer);
+
             if (DEBUG_MODE)
             {
                 printf("Reçu de Python: %s\n", buffer);
             }
 
-            // Diffuser le message sur le réseau
-            sendto(state.broadcast_socket, buffer, received_bytes, 0,
+            // Diffuser le message modifié sur le réseau
+            sendto(state.broadcast_socket, tagged_buffer, strlen(tagged_buffer), 0,
                    (struct sockaddr *)&state.broadcast_addr, sizeof(state.broadcast_addr));
+
             if (DEBUG_MODE)
             {
                 printf("Message diffusé sur le réseau\n");
@@ -238,7 +256,7 @@ THREAD_RETURN listen_from_network(void *arg)
 
     if (DEBUG_MODE)
     {
-        printf("Écoute des messages broadcast sur le port %d\n", BROADCAST_PORT);
+        printf("Écoute des messages broadcast sur %s:%d\n", inet_ntoa(state.broadcast_addr.sin_addr), BROADCAST_PORT);
     }
 
     while (state.running)
@@ -249,8 +267,8 @@ THREAD_RETURN listen_from_network(void *arg)
         {
             buffer[received_bytes] = '\0';
 
-            // Vérifier que le message ne vient pas de nous-mêmes
-            if (sender_addr.sin_addr.s_addr != inet_addr("127.0.0.1"))
+            // Vérifier si le message contient notre ID (envoyé par nous-même)
+            if (strstr(buffer, state.machine_id) == NULL)
             {
                 if (DEBUG_MODE)
                 {
@@ -258,13 +276,25 @@ THREAD_RETURN listen_from_network(void *arg)
                            inet_ntoa(sender_addr.sin_addr), buffer);
                 }
 
-                // Transmettre au jeu Python
-                sendto(state.local_socket, buffer, received_bytes, 0,
-                       (struct sockaddr *)&python_addr, sizeof(python_addr));
-                if (DEBUG_MODE)
+                // Extraire les données du message pour Python (enlever notre wrapper)
+                char *data_start = strstr(buffer, "\"data\":");
+                if (data_start)
                 {
-                    printf("Message transmis à Python\n");
+                    data_start += 7; // Dépasser "data":
+
+                    // Transmettre seulement les données au jeu Python
+                    sendto(state.local_socket, data_start, strlen(data_start), 0,
+                           (struct sockaddr *)&python_addr, sizeof(python_addr));
+
+                    if (DEBUG_MODE)
+                    {
+                        printf("Message transmis à Python\n");
+                    }
                 }
+            }
+            else if (DEBUG_MODE)
+            {
+                printf("Message ignoré (envoyé par nous-même)\n");
             }
         }
 #if IS_WINDOWS
@@ -294,8 +324,25 @@ void signal_handler(int signal)
 }
 #endif
 
-int main()
+void generate_machine_id(char *id)
 {
+    // Créer un ID simple basé sur timestamp + nombre aléatoire
+    srand((unsigned int)time(NULL));
+    sprintf(id, "bridge-%lx-%x", (unsigned long)time(NULL), rand());
+}
+
+int main(int argc, char *argv[])
+{
+    // Vérifier les arguments de ligne de commande
+    for (int i = 1; i < argc; ++i)
+    {
+        if (strcmp(argv[i], "--no-debug") == 0)
+        {
+#undef DEBUG_MODE
+#define DEBUG_MODE 0
+        }
+    }
+
 #if IS_WINDOWS
     // Initialisation de Winsock
     WSADATA wsaData;
@@ -305,9 +352,15 @@ int main()
         return 1;
     }
 
+    // Configurer l'encodage de la console sur UTF-8
+    SetConsoleOutputCP(CP_UTF8);
+
     // Pour Windows, utilisez SetConsoleCtrlHandler pour gérer les signaux
     SetConsoleCtrlHandler((PHANDLER_ROUTINE)CtrlHandler, TRUE);
 #else
+    // Configurer l'encodage de la console sur UTF-8
+    setenv("LC_ALL", "C.UTF-8", 1);
+
     // Configurer le gestionnaire de signal pour Unix
     signal(SIGINT, signal_handler);
     signal(SIGTERM, signal_handler);
@@ -408,14 +461,23 @@ int main()
         return 1;
     }
 
+    // Générer l'ID de la machine
+    generate_machine_id(state.machine_id);
+
     // Obtenir l'adresse broadcast
     get_broadcast_address(&state.broadcast_addr);
 
     if (DEBUG_MODE)
     {
-        printf("AIge of Networks - Pont réseau\n");
-        printf("------------------------------\n");
-        printf("Démarrage du pont réseau...\n");
+        printf("**********************************\n");
+        printf("* AIge of Networks - Pont réseau *\n");
+        printf("**********************************\n");
+        printf("----------------------------------\n");
+        printf("Interface réseau: %s\n", inet_ntoa(state.broadcast_addr.sin_addr));
+        printf("Adresse de broadcast: %s\n", inet_ntoa(state.broadcast_addr.sin_addr));
+        printf("----------------------------------\n");
+        printf("Machine ID: %s\n", state.machine_id);
+        printf("----------------------------------\n");
     }
 
     // Démarrer les threads d'écoute
