@@ -1,5 +1,4 @@
 import socket
-import threading
 import subprocess
 import os
 import atexit
@@ -23,10 +22,7 @@ class NetworkController:
         self.__send_sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
         self.__recv_sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
         self.__recv_sock.bind(self.__recv_address)
-        self.__recv_sock.settimeout(1.0)
-        self.__listening = False
-        self.__listener_thread = None
-        self.__message_list = []
+        self.__recv_sock.settimeout(0.1)
         self.__network_bridge_process = None
         self.__bridge_exists = True
 
@@ -35,7 +31,6 @@ class NetworkController:
 
         # S'assurer que le pont réseau est arrêté quand le programme termine
         atexit.register(self.__stop_network_bridge)
-        self.start_listening()
 
     def __start_network_bridge(self) -> None:
         """
@@ -89,10 +84,22 @@ class NetworkController:
 
     def receive(self) -> list:
         """
-        Receives all messages from the list.
+        Récupère tous les messages disponibles dans la file du socket.
         """
-        messages = self.__message_list.copy()
-        self.__message_list.clear()
+        messages = []
+        # Lire tous les messages disponibles jusqu'à ce que la file soit vide
+        while True:
+            try:
+                data, _ = self.__recv_sock.recvfrom(1024)
+                message = data.decode()
+                messages.append(message)
+            except socket.timeout:
+                # Plus de messages disponibles, on sort de la boucle
+                break
+            except ConnectionResetError:
+                # Erreur de connexion, on sort de la boucle
+                break
+
         return messages
 
     def close(self) -> None:
@@ -101,46 +108,4 @@ class NetworkController:
         """
         self.__stop_network_bridge()
         self.__recv_sock.close()
-
-    def start_listening(self) -> None:
-        """
-        Starts listening for incoming messages in a separate thread.
-        """
-        self.__listening = True
-        self.__listener_thread = threading.Thread(target=self.__listen)
-        self.__listener_thread.start()
-
-    def stop_listening(self) -> None:
-        """
-        Stops listening for incoming messages.
-        """
-        self.__listening = False
-        if self.__listener_thread:
-            self.__listener_thread.join()
-
-    def __listen(self) -> None:
-        """
-        Listens for incoming messages and processes them.
-        """
-        while self.__listening:
-            message = self.receive_message()
-            if message:
-                self.__process_message(message)
-
-    def receive_message(self) -> str:
-        """
-        Receives a single message from the C program that runs the game.
-        """
-        try:
-            data, _ = self.__recv_sock.recvfrom(1024)
-            return data.decode()
-        except socket.timeout:
-            return ""
-        except ConnectionResetError:
-            return ""
-
-    def __process_message(self, message: str) -> None:
-        """
-        Processes the received message by adding it to the list.
-        """
-        self.__message_list.append(message)
+        self.__send_sock.close()
