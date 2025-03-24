@@ -19,8 +19,9 @@ class NetworkController:
         self.__recv_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.__send_address = ("127.0.0.1", 9090)
         self.__recv_address = ("127.0.0.1", 9092)
-        self.__send_sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
-        self.__recv_sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
+        if os.name != "nt":
+            self.__send_sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
+            self.__recv_sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
         self.__recv_sock.bind(self.__recv_address)
         self.__recv_sock.settimeout(0.1)
         self.__network_bridge_process = None
@@ -48,7 +49,7 @@ class NetworkController:
                     ["make", "network_bridge"],
                     cwd=os.path.dirname(os.path.dirname(__file__)),
                 )
-            # Ajouter l'argument --no-debug
+            # Démarre le programme C du pont réseau avec le flag --run pour la transmission et --no-debug pour enlever les logs
             self.__network_bridge_process = subprocess.Popen(
                 [bridge_path, "--run", "--no-debug"]
             )

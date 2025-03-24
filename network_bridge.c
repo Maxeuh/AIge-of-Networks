@@ -16,6 +16,9 @@ typedef SOCKET socket_t;
 typedef int socklen_t;
 #define SOCKET_ERROR_VALUE INVALID_SOCKET
 #define CLOSE_SOCKET(s) closesocket(s)
+#ifndef SO_REUSEPORT
+#define SO_REUSEPORT SO_REUSEADDR
+#endif
 #else
 #define IS_WINDOWS 0
 #include <unistd.h>
@@ -105,7 +108,7 @@ void get_broadcast_address(struct sockaddr_in *broadcast_addr)
                 broadcast_addr->sin_addr.s_addr = broadcast.s_addr;
                 broadcast_addr->sin_port = htons(BROADCAST_PORT);
 
-                // IMPORTANT: Stocker les informations dans NetworkState au lieu de les afficher
+                // IMPORTANT : Stocker les informations dans NetworkState au lieu de les afficher
                 strncpy(state.interface_name, pAdapter->Description, sizeof(state.interface_name) - 1);
                 state.interface_name[sizeof(state.interface_name) - 1] = '\0';
 
@@ -146,7 +149,7 @@ void get_broadcast_address(struct sockaddr_in *broadcast_addr)
             broadcast_addr->sin_family = AF_INET;
             broadcast_addr->sin_port = htons(BROADCAST_PORT);
 
-            // IMPORTANT: Stocker les informations au lieu de les afficher
+            // IMPORTANT : Stocker les informations au lieu de les afficher
             strncpy(state.interface_name, ifa->ifa_name, sizeof(state.interface_name) - 1);
             state.interface_name[sizeof(state.interface_name) - 1] = '\0';
 
@@ -369,8 +372,8 @@ int main(int argc, char *argv[])
         printf("│ AIge of Networks - Pont réseau │\n");
         printf("└────────────────────────────────┘\n");
         printf("\n");
-        printf("Interface réseau: %s\n", state.interface_name);
-        printf("Adresse IP: %s\n", state.ip_address);
+        printf("Interface réseau : %s\n", state.interface_name);
+        printf("Adresse IP : %s\n", state.ip_address);
         printf("\n");
         printf("Adresse de réception : %s:%d\n", inet_ntoa(local_addr.sin_addr), LOCAL_PORT);
         printf("Adresse de broadcast: %s:%d\n", state.broadcast_address, BROADCAST_PORT);
@@ -417,7 +420,7 @@ int main(int argc, char *argv[])
 
                 if (is_debug)
                 {
-                    printf("Reçu de Python: %s\n", buffer);
+                    printf("Reçu de Python : %s\n", buffer);
                 }
 
                 // Diffuser le message modifié sur le réseau seulement en mode run
@@ -451,7 +454,7 @@ int main(int argc, char *argv[])
                 {
                     if (is_debug)
                     {
-                        printf("Reçu du réseau (%s): %s\n",
+                        printf("Reçu du réseau (%s) : %s\n",
                                inet_ntoa(sender_addr.sin_addr), buffer);
                     }
 
