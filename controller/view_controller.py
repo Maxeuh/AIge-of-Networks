@@ -195,26 +195,6 @@ class ViewController:
             <p>Map Type: {self.get_settings().map_type}</p>
             <p>FPS: {self.get_settings().fps}</p>
             <p>Starting Condition: {self.get_settings().starting_condition}</p>
-            <h2>Map</h2>
-            <button class="collapsible" onclick="toggleContent('map')">Show/Hide Map</button>
-            <div id="map" class="content">
-            <table>
-            <tr>
-            <th></th>
-            {"".join(f"<th>{col}</th>" for col in range(self.get_map().get_size()))}
-            <th></th>
-            </tr>
-            {"".join(
-            f"<tr><th>{row}</th>{''.join(f'<td>{self.get_map().get_map()[Coordinate(row, col)].get_letter() if self.get_map().get_map()[Coordinate(row, col)] else ''}</td>' for col in range(self.get_map().get_size()))}<th>{row}</th></tr>"
-            for row in range(self.get_map().get_size())
-            )}
-            <tr>
-            <th></th>
-            {"".join(f"<th>{col}</th>" for col in range(self.get_map().get_size()))}
-            <th></th>
-            </tr>
-            </table>
-            </div>
         </body>
         </html>
         """
