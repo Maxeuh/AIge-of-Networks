@@ -162,8 +162,9 @@ class Command(ABC):
 
     def send_network(self, data):
         """Sends command data over the network."""
-        #print(f"[DEBUG] Command sending network data: {data[:50]}...")
+        # print(f"[DEBUG] Command sending network data: {data[:50]}...")
         # Format: "COMMAND_TYPE;{json_data}"
-        command_type = self.get_process().name
-        message = f"{command_type};{data}"
-        self.__network_controller.send(message)
+        # command_type = self.get_process().name
+        # message = f"{command_type};{data}"
+        # self.__network_controller.send(message)
+        self.__network_controller.send(data)
