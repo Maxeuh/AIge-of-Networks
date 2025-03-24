@@ -53,7 +53,7 @@ class NetworkController:
                 )
             # Ajouter l'argument --no-debug
             self.__network_bridge_process = subprocess.Popen(
-                [bridge_path, "--no-debug"]
+                [bridge_path, "--run", "--no-debug"]
             )
         except Exception as e:
             self.__network_bridge_process = None

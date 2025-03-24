@@ -41,6 +41,9 @@ typedef int socket_t;
 // Mode de débogage
 int is_debug = 1;
 
+// Mode d'exécution (activer ou désactiver la communication)
+int is_run_mode = 0;
+
 typedef struct
 {
     socket_t local_socket;                   // Socket pour communiquer avec Python
@@ -189,6 +192,10 @@ int main(int argc, char *argv[])
         {
             is_debug = 0;
         }
+        else if (strcmp(argv[i], "--run") == 0)
+        {
+            is_run_mode = 1;
+        }
     }
 
 #if IS_WINDOWS
@@ -231,6 +238,19 @@ int main(int argc, char *argv[])
         return 1;
     }
 
+    // Activer SO_REUSEADDR pour le socket local
+    int reuseaddr = 1;
+    if (setsockopt(state.local_socket, SOL_SOCKET, SO_REUSEADDR,
+                   (char *)&reuseaddr, sizeof(reuseaddr)) < 0)
+    {
+        perror("Impossible de configurer SO_REUSEADDR sur le socket local");
+        CLOSE_SOCKET(state.local_socket);
+#if IS_WINDOWS
+        WSACleanup();
+#endif
+        return 1;
+    }
+
     // Configurer l'adresse locale
     memset(&local_addr, 0, sizeof(local_addr));
     local_addr.sin_family = AF_INET;
@@ -254,6 +274,19 @@ int main(int argc, char *argv[])
     {
         perror("Impossible de créer le socket broadcast");
         CLOSE_SOCKET(state.local_socket);
+#if IS_WINDOWS
+        WSACleanup();
+#endif
+        return 1;
+    }
+
+    // Activer SO_REUSEADDR pour le socket broadcast
+    if (setsockopt(state.broadcast_socket, SOL_SOCKET, SO_REUSEADDR,
+                   (char *)&reuseaddr, sizeof(reuseaddr)) < 0)
+    {
+        perror("Impossible de configurer SO_REUSEADDR sur le socket broadcast");
+        CLOSE_SOCKET(state.local_socket);
+        CLOSE_SOCKET(state.broadcast_socket);
 #if IS_WINDOWS
         WSACleanup();
 #endif
@@ -298,28 +331,29 @@ int main(int argc, char *argv[])
     // Obtenir l'adresse broadcast
     get_broadcast_address(&state.broadcast_addr);
 
-    if (is_debug)
-    {
-        printf("**********************************\n");
-        printf("* AIge of Networks - Pont réseau *\n");
-        printf("**********************************\n");
-        printf("----------------------------------\n");
-        printf("Interface réseau: %s\n", state.interface_name);
-        printf("Adresse IP: %s\n", state.ip_address);
-        printf("----------------------------------\n");
-        printf("Adresse de réception : %s:%d\n", inet_ntoa(local_addr.sin_addr), LOCAL_PORT);
-        printf("Adresse de broadcast: %s:%d\n", state.broadcast_address, BROADCAST_PORT);
-        printf("Adresse d'envoi : %s:%d\n", inet_ntoa(python_addr.sin_addr), PYTHON_PORT);
-        printf("----------------------------------\n");
-        printf("Machine ID: %s\n", state.machine_id);
-        printf("----------------------------------\n");
-    }
-
     // Configurer l'adresse du jeu Python local
     memset(&python_addr, 0, sizeof(python_addr));
     python_addr.sin_family = AF_INET;
     python_addr.sin_addr.s_addr = inet_addr("127.0.0.1");
     python_addr.sin_port = htons(PYTHON_PORT);
+
+    if (is_debug)
+    {
+        printf("┌────────────────────────────────┐\n");
+        printf("│ AIge of Networks - Pont réseau │\n");
+        printf("└────────────────────────────────┘\n");
+        printf("\n");
+        printf("Interface réseau: %s\n", state.interface_name);
+        printf("Adresse IP: %s\n", state.ip_address);
+        printf("\n");
+        printf("Adresse de réception : %s:%d\n", inet_ntoa(local_addr.sin_addr), LOCAL_PORT);
+        printf("Adresse de broadcast: %s:%d\n", state.broadcast_address, BROADCAST_PORT);
+        printf("Adresse d'envoi : %s:%d\n", inet_ntoa(python_addr.sin_addr), PYTHON_PORT);
+        printf("\n");
+        printf("Machine ID : %s\n", state.machine_id);
+        printf("Mode d'exécution : %s\n", is_run_mode ? "Exécution (envoi et réception de données)" : "Écoute uniquement");
+        printf("\n----------------------------------\n\n");
+    }
 
     fd_set read_fds;
     int max_fd = (state.local_socket > state.broadcast_socket) ? state.local_socket : state.broadcast_socket;
@@ -345,6 +379,7 @@ int main(int argc, char *argv[])
             socklen_t client_len = sizeof(client_addr);
             int received_bytes = recvfrom(state.local_socket, buffer, BUFFER_SIZE - 1, 0,
                                           (struct sockaddr *)&client_addr, &client_len);
+
             if (received_bytes > 0)
             {
                 buffer[received_bytes] = '\0';
@@ -359,13 +394,17 @@ int main(int argc, char *argv[])
                     printf("Reçu de Python: %s\n", buffer);
                 }
 
-                // Diffuser le message modifié sur le réseau
-                sendto(state.broadcast_socket, tagged_buffer, strlen(tagged_buffer), 0,
-                       (struct sockaddr *)&state.broadcast_addr, sizeof(state.broadcast_addr));
-
-                if (is_debug)
+                // Diffuser le message modifié sur le réseau seulement en mode run
+                if (is_run_mode)
                 {
-                    printf("Message diffusé sur le réseau\n");
+                    // Diffuser le message modifié sur le réseau
+                    sendto(state.broadcast_socket, tagged_buffer, strlen(tagged_buffer), 0,
+                           (struct sockaddr *)&state.broadcast_addr, sizeof(state.broadcast_addr));
+
+                    if (is_debug)
+                    {
+                        printf("Message diffusé sur le réseau\n");
+                    }
                 }
             }
         }
@@ -396,17 +435,24 @@ int main(int argc, char *argv[])
                     {
                         data_start += 7; // Dépasser "data":
 
-                        // Transmettre seulement les données au jeu Python
-                        sendto(state.local_socket, data_start, strlen(data_start), 0,
-                               (struct sockaddr *)&python_addr, sizeof(python_addr));
-
-                        if (is_debug)
+                        // Transmettre seulement les données au jeu Python en mode run
+                        if (is_run_mode)
                         {
-                            printf("Message transmis à Python\n");
+                            sendto(state.local_socket, data_start, strlen(data_start), 0,
+                                   (struct sockaddr *)&python_addr, sizeof(python_addr));
+
+                            if (is_debug)
+                            {
+                                printf("Message transmis à Python\n");
+                            }
+                        }
+                        else if (is_debug)
+                        {
+                            printf("Mode écoute uniquement: message non transmis à Python\n");
                         }
                     }
                 }
-                else if (is_debug)
+                else if (is_debug && is_run_mode)
                 {
                     printf("Message ignoré (envoyé par nous-même)\n");
                 }
