@@ -20,6 +20,8 @@ class NetworkController:
         self.__recv_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.__send_address = ("127.0.0.1", 9090)
         self.__recv_address = ("127.0.0.1", 9092)
+        self.__send_sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
+        self.__recv_sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
         self.__recv_sock.bind(self.__recv_address)
         self.__recv_sock.settimeout(1.0)
         self.__listening = False

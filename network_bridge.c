@@ -251,6 +251,19 @@ int main(int argc, char *argv[])
         return 1;
     }
 
+    // Activer SO_REUSEPORT pour le socket local
+    int reuseport = 1;
+    if (setsockopt(state.local_socket, SOL_SOCKET, SO_REUSEPORT,
+                   (char *)&reuseport, sizeof(reuseport)) < 0)
+    {
+        perror("Impossible de configurer SO_REUSEPORT sur le socket local");
+        CLOSE_SOCKET(state.local_socket);
+#if IS_WINDOWS
+        WSACleanup();
+#endif
+        return 1;
+    }
+
     // Configurer l'adresse locale
     memset(&local_addr, 0, sizeof(local_addr));
     local_addr.sin_family = AF_INET;
@@ -285,6 +298,19 @@ int main(int argc, char *argv[])
                    (char *)&reuseaddr, sizeof(reuseaddr)) < 0)
     {
         perror("Impossible de configurer SO_REUSEADDR sur le socket broadcast");
+        CLOSE_SOCKET(state.local_socket);
+        CLOSE_SOCKET(state.broadcast_socket);
+#if IS_WINDOWS
+        WSACleanup();
+#endif
+        return 1;
+    }
+
+    // Activer SO_REUSEPORT pour le socket broadcast
+    if (setsockopt(state.broadcast_socket, SOL_SOCKET, SO_REUSEPORT,
+                   (char *)&reuseport, sizeof(reuseport)) < 0)
+    {
+        perror("Impossible de configurer SO_REUSEPORT sur le socket broadcast");
         CLOSE_SOCKET(state.local_socket);
         CLOSE_SOCKET(state.broadcast_socket);
 #if IS_WINDOWS
@@ -445,10 +471,6 @@ int main(int argc, char *argv[])
                             {
                                 printf("Message transmis à Python\n");
                             }
-                        }
-                        else if (is_debug)
-                        {
-                            printf("Mode écoute uniquement: message non transmis à Python\n");
                         }
                     }
                 }
