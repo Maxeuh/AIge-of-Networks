@@ -3,7 +3,7 @@
 # Définir la cible par défaut
 default: network_bridge
 
-# Par défaut, afficher l'aide
+# Afficher l'aide
 help:
 	@echo "make : Compiler le programme network_bridge"
 	@echo "make clean : Nettoyer les fichiers compilés de network_bridge"

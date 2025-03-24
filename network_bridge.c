@@ -43,11 +43,14 @@ int is_debug = 1;
 
 typedef struct
 {
-    socket_t local_socket;
-    socket_t broadcast_socket;
-    int running;
-    struct sockaddr_in broadcast_addr;
-    char machine_id[37]; // UUID pour identifier cette machine
+    socket_t local_socket;                   // Socket pour communiquer avec Python
+    socket_t broadcast_socket;               // Socket pour diffuser les messages sur le réseau
+    int running;                             // Indicateur pour l'arrêt du programme
+    struct sockaddr_in broadcast_addr;       // Adresse de broadcast du réseau
+    char machine_id[37];                     // UUID pour identifier cette machine
+    char interface_name[256];                // Nom de l'interface réseau
+    char ip_address[INET_ADDRSTRLEN];        // Adresse IP de l'interface réseau
+    char broadcast_address[INET_ADDRSTRLEN]; // Adresse de broadcast de l'interface réseau
 } NetworkState;
 
 NetworkState state;
@@ -82,41 +85,32 @@ void get_broadcast_address(struct sockaddr_in *broadcast_addr)
         while (pAdapter)
         {
             // Ignorer les adaptateurs sans adresse IP
-            if (pAdapter->IpAddressList.IpAddress.String[0] != '0')
+            if (pAdapter->IpAddressList.IpAddress.String[0] != '0' &&
+                strncmp(pAdapter->IpAddressList.IpAddress.String, "127.", 4) != 0)
             {
-                // Vérifier que ce n'est pas l'adresse loopback (127.0.0.1)
-                if (strncmp(pAdapter->IpAddressList.IpAddress.String, "127.", 4) != 0)
-                {
-                    struct in_addr ipaddr, netmask, broadcast;
+                struct in_addr ipaddr, netmask, broadcast;
 
-                    // Convertir IP et masque en valeurs binaires
-                    inet_pton(AF_INET, pAdapter->IpAddressList.IpAddress.String, &ipaddr);
-                    inet_pton(AF_INET, pAdapter->IpAddressList.IpMask.String, &netmask);
+                // Convertir IP et masque en valeurs binaires
+                inet_pton(AF_INET, pAdapter->IpAddressList.IpAddress.String, &ipaddr);
+                inet_pton(AF_INET, pAdapter->IpAddressList.IpMask.String, &netmask);
 
-                    // Calculer l'adresse de broadcast
-                    broadcast.s_addr = ipaddr.s_addr | ~(netmask.s_addr);
+                // Calculer l'adresse de broadcast
+                broadcast.s_addr = ipaddr.s_addr | ~(netmask.s_addr);
 
-                    // Configurer l'adresse de broadcast
-                    broadcast_addr->sin_family = AF_INET;
-                    broadcast_addr->sin_addr.s_addr = broadcast.s_addr;
-                    broadcast_addr->sin_port = htons(BROADCAST_PORT);
+                // Configurer l'adresse de broadcast
+                broadcast_addr->sin_family = AF_INET;
+                broadcast_addr->sin_addr.s_addr = broadcast.s_addr;
+                broadcast_addr->sin_port = htons(BROADCAST_PORT);
 
-                    if (is_debug)
-                    {
-                        char ip_str[INET_ADDRSTRLEN];
-                        char broadcast_str[INET_ADDRSTRLEN];
+                // IMPORTANT: Stocker les informations dans NetworkState au lieu de les afficher
+                strncpy(state.interface_name, pAdapter->Description, sizeof(state.interface_name) - 1);
+                state.interface_name[sizeof(state.interface_name) - 1] = '\0';
 
-                        inet_ntop(AF_INET, &ipaddr, ip_str, INET_ADDRSTRLEN);
-                        inet_ntop(AF_INET, &broadcast.s_addr, broadcast_str, INET_ADDRSTRLEN);
+                inet_ntop(AF_INET, &ipaddr, state.ip_address, sizeof(state.ip_address));
+                inet_ntop(AF_INET, &broadcast_addr->sin_addr, state.broadcast_address, sizeof(state.broadcast_address));
 
-                        // Stockez les informations pour affichage ultérieur
-                        strncpy(pAdapter->Description, "Adapter Description", sizeof(pAdapter->Description));
-                        // Les autres informations sont déjà dans broadcast_addr
-                    }
-
-                    // Utiliser le premier adaptateur non-loopback
-                    break;
-                }
+                // Utiliser le premier adaptateur non-loopback
+                break;
             }
             pAdapter = pAdapter->Next;
         }
@@ -149,14 +143,16 @@ void get_broadcast_address(struct sockaddr_in *broadcast_addr)
             broadcast_addr->sin_family = AF_INET;
             broadcast_addr->sin_port = htons(BROADCAST_PORT);
 
-            if (is_debug)
-            {
-                printf("Interface réseau: %s\n", ifa->ifa_name);
-                printf("Adresse IP: %s\n", inet_ntoa(sa->sin_addr));
-                printf("Adresse de broadcast: %s\n", inet_ntoa(broadcast_addr->sin_addr));
-            }
+            // IMPORTANT: Stocker les informations au lieu de les afficher
+            strncpy(state.interface_name, ifa->ifa_name, sizeof(state.interface_name) - 1);
+            state.interface_name[sizeof(state.interface_name) - 1] = '\0';
 
-            // Prendre la première interface non-loopback
+            strncpy(state.ip_address, inet_ntoa(sa->sin_addr), sizeof(state.ip_address) - 1);
+            state.ip_address[sizeof(state.ip_address) - 1] = '\0';
+
+            strncpy(state.broadcast_address, inet_ntoa(broadcast_addr->sin_addr), sizeof(state.broadcast_address) - 1);
+            state.broadcast_address[sizeof(state.broadcast_address) - 1] = '\0';
+
             break;
         }
     }
@@ -308,8 +304,11 @@ int main(int argc, char *argv[])
         printf("* AIge of Networks - Pont réseau *\n");
         printf("**********************************\n");
         printf("----------------------------------\n");
+        printf("Interface réseau: %s\n", state.interface_name);
+        printf("Adresse IP: %s\n", state.ip_address);
+        printf("----------------------------------\n");
         printf("Adresse de réception : %s:%d\n", inet_ntoa(local_addr.sin_addr), LOCAL_PORT);
-        printf("Adresse de broadcast : %s:%d\n", inet_ntoa(state.broadcast_addr.sin_addr), BROADCAST_PORT);
+        printf("Adresse de broadcast: %s:%d\n", state.broadcast_address, BROADCAST_PORT);
         printf("Adresse d'envoi : %s:%d\n", inet_ntoa(python_addr.sin_addr), PYTHON_PORT);
         printf("----------------------------------\n");
         printf("Machine ID: %s\n", state.machine_id);
