@@ -77,7 +77,6 @@ class BuildCommand(Command):
             self.get_interactions().place_object(
                 self.__place_holder, self.__target_coord
             )
-            self.send_network()
 
         if self.get_tick() <= 0:
             if self in self.__command_list:
@@ -85,7 +84,6 @@ class BuildCommand(Command):
                 self.get_interactions().place_object(
                     self.__building, self.__target_coord
                 )
-                self.send_network()
                 self.get_interactions().link_owner(self.get_player(), self.__building)
                 if self.__building.is_population_increase():
                     self.get_player().set_max_population(
@@ -104,13 +102,13 @@ class BuildCommand(Command):
             "command": "BUILD",
             "entity_id": id(entity),
             "entity_type": entity.__class__.__name__,
-            "entity_name": entity.get_name(), 
+            "entity_name": entity.get_name(),
             "player": self.get_player().get_name(),
             "building_type": self.__building.__class__.__name__,
             "building_name": self.__building.get_name(),
             "building_x": self.__target_coord.get_x(),
             "building_y": self.__target_coord.get_y(),
             "building_size": self.__building.get_size(),
-            "ticks_remaining": self.get_tick()
+            "ticks_remaining": self.get_tick(),
         }
         super().send_network(json.dumps(command_data))

@@ -157,10 +157,11 @@ class Map:
             )
         if not self.check_placement(object, new_coordinate):
             raise ValueError("New coordinate is not available.")
-        self.remove(object.get_coordinate())
+        if self.get(object.get_coordinate()):
+            self.remove(object.get_coordinate())
         self.add(object, new_coordinate)
 
-    def __force_move(self, object: GameObject, new_coordinate: Coordinate):
+    def force_move(self, object: GameObject, new_coordinate: Coordinate):
         """
         Forcefully move an entity to a new coordinate.
 
@@ -182,6 +183,20 @@ class Map:
         :rtype: GameObject
         """
         return self.__matrix[coordinate]
+
+    def get_object_id(self, id: int) -> GameObject:
+        """
+        Get the object with a certain id.
+
+        :param id: The id of the object to be retrieved.
+        :type id: int
+        :return: The game object with the given id.
+        :rtype: GameObject
+        """
+        for obj in self.__matrix.values():
+            if obj is not None and obj.get_id() == id:
+                return obj
+        return None
 
     def get_map(self) -> defaultdict[Coordinate, GameObject]:
         """
@@ -577,7 +592,7 @@ class Map:
         object: GameObject = self.get(coordinate)
         if object is None:
             return "white"
-        if isinstance(object, Entity):
+        if isinstance(object, Entity) and object.get_player() is not None:
             return object.get_player().get_color()
         return "white"
 

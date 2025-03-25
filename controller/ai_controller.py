@@ -25,15 +25,14 @@ class AIController:
         self.__players: list[Player] = self.__game_controller.get_players()
         self.__refresh_rate: int = refresh_rate
         self.__running = True
-        #for player in self.__players:
-           # player.set_ai(AI(player, None, self.__game_controller.get_map().capture()))
+        # for player in self.__players:
+        # player.set_ai(AI(player, None, self.__game_controller.get_map().capture()))
 
     def exit(self) -> None:
         """
         Exits the AIController.
         """
         self.__running = False
-        exit(0)
 
     def update_knowledge(self) -> None:
         """
@@ -45,6 +44,8 @@ class AIController:
         for player in self.__players:
             player.update_centre_coordinate()
         for player in self.__players:
+            if player.get_ai() is None:
+                continue
             player.get_ai().set_map_known(self.__game_controller.get_map().capture())
             player.get_ai().update_enemies(
                 [enemy.capture() for enemy in self.__players if enemy != player]

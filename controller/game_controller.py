@@ -1,13 +1,18 @@
+import json
 import random
 import threading
 import typing
-import json
 
 from pygame import time
 
 from controller.ai_controller import AIController
 from controller.command_controller import CommandController
 from controller.network_controller import NetworkController
+from model.buildings.barracks import Barracks
+from model.buildings.building import Building
+from model.buildings.farm import Farm
+from model.buildings.house import House
+from model.game_object import GameObject
 from model.interactions import Interactions
 from controller.task_manager import TaskController
 from controller.view_controller import ViewController
@@ -18,16 +23,22 @@ from model.player.player import Player
 from model.player.strategies.random_strategy import RandomStrategy
 from model.resources.food import Food
 from model.resources.gold import Gold
+from model.resources.resource import Resource
 from model.resources.wood import Wood
 from model.tasks.build_task import BuildTask
+from model.units.archer import Archer
+from model.units.horseman import Horseman
+from model.units.swordsman import Swordsman
+from model.units.unit import Unit
 from model.units.villager import Villager
 from util.coordinate import Coordinate
 from util.map import Map
 from util.settings import Settings
-from util.state_manager import MapType, StartingCondition
+from util.state_manager import InteractionsTypes, MapType, StartingCondition
 
 if typing.TYPE_CHECKING:
     from controller.menu_controller import MenuController
+import uuid
 
 
 class GameController:
@@ -48,6 +59,16 @@ class GameController:
         :param menu_controller: The menu controller.
         :type menu_controller: MenuController
         """
+        self.__colors: list[str] = [
+            "blue",
+            "red",
+            "green",
+            "yellow",
+            "purple",
+            "orange",
+            "pink",
+            "cyan",
+        ]
         self.__network_controller: NetworkController = NetworkController()
         self.__menu_controller: "MenuController" = menu_controller
         self.settings: Settings = self.__menu_controller.settings
@@ -80,12 +101,22 @@ class GameController:
     def get_commandlist(self):
         return self.__command_list
 
-    def __generate_player(self, player_id: int, game_map: Map) -> None:
+    def __generate_player(self, player_id: uuid.UUID, game_map: Map) -> Player:
         """
         Generates a player based on the settings.
         """
-        colors = ["blue", "red", "green", "yellow", "purple", "orange", "pink", "cyan"]
-        player = Player("Player " + str(player_id + 1), colors[player_id])
+        if len(self.__colors) == 0:
+            self.__colors = [
+                "blue",
+                "red",
+                "green",
+                "yellow",
+                "purple",
+                "orange",
+                "pink",
+                "cyan",
+            ]
+        player = Player(str(player_id), self.__colors.pop(0))
         self.get_players().append(player)
         player.set_command_manager(
             CommandController(
@@ -97,6 +128,9 @@ class GameController:
             )
         )
         player.set_task_manager(TaskController(player.get_command_manager()))
+        player.set_max_population(5000)
+
+        return player
 
     def __assign_AI(self) -> None:
         for player in self.get_players():
@@ -143,8 +177,8 @@ class GameController:
         # Generate the players:
         # Place the town center of the first player at random position, far from the center (30% of map size).
         # Place the 2nd player town center at the opposite side of the map.
-        self.__generate_player(0, map_generation)
-        interactions = Interactions(map_generation)
+        self.__generate_player(uuid.uuid4(), map_generation)
+        interactions = Interactions(map_generation, self.__network_controller)
         min_distance = int(self.settings.map_size.value * 0.3)
         player = self.get_players()[0]
         town_center = TownCenter()
@@ -278,10 +312,10 @@ class GameController:
         if MapType(self.settings.map_type) == MapType.TEST:
             # Generate a test map 10x10 with a town center at (0,0) and a villager at (5,5)
             map_generation = Map(120)
-            interactions = Interactions(map_generation)
-            self.__generate_player(0, map_generation)
+            interactions = Interactions(map_generation, self.__network_controller)
+            self.__generate_player(uuid.uuid4(), map_generation)
             ## always in the creation of a new map, the players are generated before all generation of objects
-            self.__generate_player(1, map_generation)
+            self.__generate_player(uuid.uuid4(), map_generation)
             self.get_players()[0].collect(Wood(), 1000)
             ## Init for player 1
             town_center1 = TownCenter()
@@ -350,9 +384,17 @@ class GameController:
         """Exits the game."""
         self.__running = False
         self.__ai_controller.exit()
-        self.__menu_controller.exit()
-        self.__network_controller.send("EXIT")
+        self.__network_controller.send(
+            {
+                "action": InteractionsTypes.EXIT.value,
+                "player": {
+                    "name": self.__players[0].get_name(),
+                    "center": self.__players[0].get_centre_coordinate().__str__(),
+                },
+            }
+        )
         self.__network_controller.close()
+        self.__menu_controller.exit()
 
     def get_speed(self) -> int:
         """Get the current speed."""
@@ -391,6 +433,7 @@ class GameController:
             while self.__running:
                 self.load_task()
                 self.update()
+                self.network_interactions()
                 time.Clock().tick(self.settings.fps.value * self.get_speed())
         except Exception as e:
             raise RuntimeError(f"Game loop failed: {e}")
@@ -444,3 +487,290 @@ class GameController:
         :rtype: NetworkController
         """
         return self.__network_controller
+
+    def get_player_with_name(self, player_name: str) -> typing.Optional[Player]:
+        for player in self.__players:
+            if str(player.get_name()) == str(player_name):
+                return player
+        return None
+
+    def player_leave(self, player: Player):
+        self.__players.remove(player)
+
+    def get_building(self, id: int, player: Player) -> typing.Optional[Building]:
+        return next((b for b in player.get_buildings() if b.get_id() == id), None)
+
+    def get_unit(self, id: int, player: Player) -> typing.Optional[Unit]:
+        return next((u for u in player.get_units() if u.get_id() == id), None)
+
+    def get_ressource(self, id: int) -> typing.Optional[Resource]:
+        return self.__map.get_object(id)
+
+    def create_object(self, name: str) -> GameObject:
+        object_classes = {
+            "Barracks": Barracks,
+            "Farm": Farm,
+            "House": House,
+            "Town Center": TownCenter,
+            "Food": Food,
+            "Gold": Gold,
+            "Wood": Wood,
+            "Archer": Archer,
+            "Horseman": Horseman,
+            "Swordsman": Swordsman,
+            "Villager": Villager,
+        }
+        if name == "Place Holder":
+            return GameObject("Place Holder", "x", 9999)
+        return object_classes.get(name, GameObject)()
+
+    def network_interactions(self) -> None:
+        interactions = self.__network_controller.receive()
+        for interaction in interactions:
+            action = InteractionsTypes(interaction["action"])
+            player = self.get_player_with_name(
+                interaction.get("player", {}).get("name", "")
+            )
+            if not player and "player" in interaction:
+                player = self.__generate_player(
+                    interaction["player"]["name"], self.__map
+                )
+
+            if action == InteractionsTypes.PLACE_OBJECT:
+                self.__handle_place_object(interaction)
+            elif action == InteractionsTypes.REMOVE_OBJECT:
+                self.__handle_remove_object(interaction)
+            elif action == InteractionsTypes.MOVE_UNIT:
+                self.__handle_move_unit(interaction, player)
+            elif action == InteractionsTypes.ATTACK:
+                self.__handle_attack(interaction, player)
+            elif action == InteractionsTypes.COLLECT_RESOURCE:
+                self.__handle_collect_resource(interaction)
+            elif action == InteractionsTypes.DROP_RESOURCE:
+                self.__handle_drop_resource(interaction)
+            elif action == InteractionsTypes.LINK_OWNER:
+                self.__handle_link_owner(interaction, player)
+            elif action == InteractionsTypes.EXIT:
+                self.player_leave(player)
+
+    def __handle_place_object(self, interaction: list):
+        pass
+        obj = self.create_object(interaction["game_object"]["name"])
+        if obj.get_name() == "Place Holder":
+            obj.set_size(interaction["game_object"]["size"])
+        coordinate = Coordinate(
+            *map(int, interaction["game_object"]["coordinate"].strip("()").split(","))
+        )
+        obj.set_id(interaction["game_object"]["id"])
+        obj.set_coordinate(coordinate)
+        map_object = self.__map.get(coordinate)
+        if map_object and map_object.get_id() != interaction["game_object"]["id"]:
+            for i in range(map_object.get_size()):
+                for j in range(map_object.get_size()):
+                    if self.__map.get(
+                        Coordinate(coordinate.get_x() + i, coordinate.get_y() + j)
+                    ):
+                        self.__map.remove(
+                            Coordinate(coordinate.get_x() + i, coordinate.get_y() + j)
+                        )
+        self.__map.add(obj, coordinate)
+
+    def __handle_remove_object(self, interaction):
+        coordinate = Coordinate(
+            *map(int, interaction["coordinate"].strip("()").split(","))
+        )
+        object = self.__map.get(coordinate)
+        if object and object.get_id() == interaction["id"]:
+            self.__map.remove(coordinate)
+
+    def __handle_move_unit(self, interaction: list, player: Player):
+        unit = self.get_unit(interaction["unit"]["id"], player)
+        coordinate = Coordinate(
+            *map(int, interaction["unit"]["coordinate"].strip("()").split(","))
+        )
+        if not unit:
+            unit = self.create_object(interaction["unit"]["name"])
+            unit.set_id(interaction["unit"]["id"])
+            player.add_unit(unit)
+            unit.set_coordinate(coordinate)
+            object = self.__map.get(coordinate)
+            if object and object.get_id() != interaction["unit"]["id"]:
+                self.__map.remove(coordinate)
+            temp = self.__map.get(coordinate)
+            self.__map.add(unit, coordinate)
+        else:
+            object = self.__map.get(coordinate)
+            self.__map.remove(unit.get_coordinate())
+            if object and object.get_id() != interaction["unit"]["id"]:
+                self.__map.remove(coordinate)
+            unit.set_coordinate(coordinate)
+            self.__map.force_move(unit, coordinate)
+
+    def __handle_attack(self, interaction: list, player: Player):
+        # {
+        #     "action": InteractionsTypes.ATTACK.value,
+        #     "player": attacker.get_player().get_name(),
+        #     "attacker": {
+        #         "id": id(attacker),
+        #         "name": attacker.get_name(),
+        #         "coordinate": attacker.get_coordinate().__str__(),
+        #     },
+        #     "target": {
+        #         "id": id(target),
+        #         "name": target.get_name(),
+        #         "coordinate": target.get_coordinate().__str__(),
+        #         "hp": target.get_hp,
+        #     },
+        # }
+        pass
+        # attacker = self.get_unit(interaction["attacker"]["id"], player)
+        # target = self.get_unit(interaction["target"]["id"], player)
+        # if not attacker:
+        #     attacker = self.create_object(interaction["attacker"]["name"])
+        #     attacker.set_id(interaction["attacker"]["id"])
+        #     attacker.set_coordinate(
+        #         Coordinate(
+        #             *map(
+        #                 int,
+        #                 interaction["attacker"]["coordinate"].strip("()").split(","),
+        #             )
+        #         )
+        #     )
+        #     object = self.__map.get(attacker.get_coordinate())
+        #     if object and object.get_id() != interaction["attacker"]["id"]:
+        #         for i in range(object.get_size()):
+        #             for j in range(object.get_size()):
+        #                 if self.__map.get(
+        #                     Coordinate(
+        #                         attacker.get_coordinate().get_x() + i,
+        #                         attacker.get_coordinate().get_y() + j,
+        #                     )
+        #                 ):
+        #                     self.__map.remove(
+        #                         Coordinate(
+        #                             attacker.get_coordinate().get_x() + i,
+        #                             attacker.get_coordinate().get_y() + j,
+        #                         )
+        #                     )
+        #     self.__map.add(attacker, attacker.get_coordinate())
+        #     player.add_unit(attacker)
+        # if not target:
+        #     target = self.create_object(interaction["target"]["name"])
+        #     target.set_id(interaction["target"]["id"])
+        #     target.set_coordinate(
+        #         Coordinate(
+        #             *map(
+        #                 int, interaction["target"]["coordinate"].strip("()").split(",")
+        #             )
+        #         )
+        #     )
+        #     object = self.__map.get(target.get_coordinate())
+        #     if object and object.get_id() != interaction["target"]["id"]:
+        #         for i in range(object.get_size()):
+        #             for j in range(object.get_size()):
+        #                 if self.__map.get(
+        #                     Coordinate(
+        #                         target.get_coordinate().get_x() + i,
+        #                         target.get_coordinate().get_y() + j,
+        #                     )
+        #                 ):
+        #                     self.__map.remove(
+        #                         Coordinate(
+        #                             target.get_coordinate().get_x() + i,
+        #                             target.get_coordinate().get_y() + j,
+        #                         )
+        #                     )
+        #     self.__map.add(target, target.get_coordinate())
+        #     self.__players[0].add_unit(target)
+        # target.damage(attacker.get_attack_per_second())
+
+        # if not target.is_alive():
+        #     self.remove_object(target)
+        #     owner = target.get_player()
+        #     if isinstance(target, Building) and target.is_population_increase():
+        #         owner.set_max_population(
+        #             owner.get_max_population() - target.get_capacity_increase()
+        #         )
+        #     target.set_player(None)
+        #     if isinstance(target, Building):
+        #         owner.remove_building(target)
+        #     if isinstance(target, Unit):
+        #         owner.remove_unit(target)
+
+    def __handle_collect_resource(self, interaction: list):
+        # {
+        #     "action": InteractionsTypes.COLLECT_RESOURCE.value,
+        #     "player": villager.get_player().get_name(),
+        #     "villager": {
+        #         "id": id(villager),
+        #         "name": villager.get_name(),
+        #         "coordinate": villager.get_coordinate().__str__(),
+        #     },
+        #     "resource": {
+        #         "id": id(resource),
+        #         "name": resource.get_name(),
+        #         "coordinate": resource.get_coordinate().__str__(),
+        #         "hp": resource.get_hp(),
+        #     },
+        #     "amount": amount,
+        # }
+        pass
+
+    def __handle_drop_resource(self, interaction: list):
+        # {
+        #     "action": InteractionsTypes.DROP_RESOURCE.value,
+        #     "player": player.get_name(),
+        #     "villager": {
+        #         "id": id(villager),
+        #         "name": villager.get_name(),
+        #         "coordinate": villager.get_coordinate().__str__(),
+        #     },
+        #     "target": {
+        #         "id": id(target),
+        #         "name": target.get_name(),
+        #         "coordinate": target.get_coordinate().__str__(),
+        #     },
+        #     "resources": collected_resources,
+        # }
+        pass
+
+    def __handle_link_owner(self, interaction: list, player: Player):
+        entity = self.create_object(interaction["entity"]["name"])
+        coordinate = Coordinate(
+            *map(int, interaction["entity"]["coordinate"].strip("()").split(","))
+        )
+        if not entity:
+            entity = self.create_object(interaction["entity"]["name"])
+            entity.set_id(interaction["entity"]["id"])
+            entity.set_coordinate(coordinate)
+            object = self.__map.get(coordinate)
+            for i in range(object.get_size()):
+                for j in range(object.get_size()):
+                    if self.__map.get(
+                        Coordinate(coordinate.get_x() + i, coordinate.get_y() + j)
+                    ):
+                        self.__map.remove(
+                            Coordinate(coordinate.get_x() + i, coordinate.get_y() + j)
+                        )
+            temp = self.__map.get(coordinate)
+            self.__map.add(entity, coordinate)
+            if isinstance(entity, Unit):
+                player.add_unit(entity)
+            elif isinstance(entity, Building):
+                player.add_building(entity)
+        else:
+            entity.set_coordinate(coordinate)
+            if isinstance(entity, Unit) and entity not in player.get_units():
+                object = self.__map.get(coordinate)
+                if object and object.get_id() != interaction["entity"]["id"]:
+                    for i in range(object.get_size()):
+                        for j in range(object.get_size()):
+                            self.__map.remove(
+                                Coordinate(
+                                    coordinate.get_x() + i, coordinate.get_y() + j
+                                )
+                            )
+                self.__map.force_move(entity, coordinate)
+                player.add_unit(entity)
+            elif isinstance(entity, Building) and entity not in player.get_buildings():
+                player.add_building(entity)

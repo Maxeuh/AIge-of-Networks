@@ -4,13 +4,21 @@ from model.game_object import GameObject
 from model.resources.resource import Resource
 
 if typing.TYPE_CHECKING:
-    from model.commands.command import Task
+    from model.tasks.task import Task
     from model.player.player import Player
+
 
 class Entity(GameObject):
     """This class represents the entities (Units and Buildings) on the map."""
-    
-    def __init__(self, name: str, letter: str, hp: int, cost: dict['Resource', int], spawning_time: int):
+
+    def __init__(
+        self,
+        name: str,
+        letter: str,
+        hp: int,
+        cost: dict["Resource", int],
+        spawning_time: int,
+    ):
         """
         Initializes the entity.
 
@@ -28,15 +36,15 @@ class Entity(GameObject):
         super().__init__(name, letter, hp)
         self.__cost: dict[Resource, int] = cost
         self.__spawning_time: int = spawning_time
-        self.__player: 'Player' = None
-        self.__task: 'Task' = None
+        self.__player: "Player" = None
+        self.__task: "Task" = None
 
     def __repr__(self):
         return f"{self.get_name()} Hp: {self.get_hp()}. Coordinate: {self.get_coordinate()}"
-    
+
     def __repr__(self):
         return f"{self.get_name()} Hp: {self.get_hp()}. Coordinate: {self.get_coordinate()}"
-    
+
     def get_cost(self) -> dict[Resource, int]:
         """
         Returns the cost of the entity.
@@ -45,7 +53,7 @@ class Entity(GameObject):
         :rtype: dict['Resource', int]
         """
         return self.__cost
-    
+
     def get_spawning_time(self) -> int:
         """
         Returns the spawning time of the entity.
@@ -54,7 +62,8 @@ class Entity(GameObject):
         :rtype: int
         """
         return self.__spawning_time
-    def get_player(self) -> 'Player':
+
+    def get_player(self) -> "Player":
         """
         Returns the player associated with the entity.
 
@@ -62,7 +71,8 @@ class Entity(GameObject):
         :rtype: Player
         """
         return self.__player
-    def set_player(self, player: 'Player') -> None:
+
+    def set_player(self, player: "Player") -> None:
         """
         Sets the player associated with the entity.
 
@@ -70,8 +80,8 @@ class Entity(GameObject):
         :type player: Player
         """
         self.__player = player
-    
-    def get_task(self) -> 'Task':
+
+    def get_task(self) -> "Task":
         """
         Returns the task associated with the entity.
 
@@ -79,8 +89,8 @@ class Entity(GameObject):
         :rtype: Task
         """
         return self.__task
-    
-    def set_task(self, task: 'Task') -> None:
+
+    def set_task(self, task: "Task") -> None:
         """
         Sets the task associated with the entity.
 
@@ -88,5 +98,3 @@ class Entity(GameObject):
         :type task: Task
         """
         self.__task = task
-    
-    

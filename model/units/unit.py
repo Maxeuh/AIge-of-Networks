@@ -1,4 +1,3 @@
-
 from model.entity import Entity
 from model.resources.resource import Resource
 
@@ -6,7 +5,16 @@ from model.resources.resource import Resource
 class Unit(Entity):
     """This class represents the units on the map."""
 
-    def __init__(self, name: str, letter: str, hp: int, cost: dict[Resource, int], spawning_time: int, attack_per_second: int, speed: float):
+    def __init__(
+        self,
+        name: str,
+        letter: str,
+        hp: int,
+        cost: dict[Resource, int],
+        spawning_time: int,
+        attack_per_second: int,
+        speed: float,
+    ):
         """
         Initializes the unit.
 
@@ -31,35 +39,26 @@ class Unit(Entity):
         self.__range: int = 1
         super().set_sprite_path(f"assets/sprites/units/{name.lower()}.png")
 
-    
-    """This method will return the speed of attack of the unit"""
     def get_attack_per_second(self) -> float:
+        """This method will return the speed of attack of the unit"""
         return self.__attack_per_second
-    
-    """This method will return the speed of the unit"""
+
     def get_speed(self) -> float:
+        """This method will return the speed of the unit"""
         return self.__speed
-    
-    """This method will return the range of the unit"""
+
     def get_range(self) -> int:
+        """This method will return the range of the unit"""
         return self.__range
-    
-    """This method will set the range of the unit"""
+
     def set_range(self, new_range: int):
+        """This method will set the range of the unit"""
         self.__range = new_range
 
-    """This method will set the speed of the unit"""
     def set_speed(self, new_speed: float):
+        """This method will set the speed of the unit"""
         self.__speed = new_speed
 
-
-    """This method will set the attack speed of the unit"""
     def set_attack_per_second(self, new_attack_per_second: float):
+        """This method will set the attack speed of the unit"""
         self.__attack_per_second = new_attack_per_second
-
-    
-   
-        
-
-            
-

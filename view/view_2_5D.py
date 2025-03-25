@@ -278,8 +278,6 @@ class View2_5D(BaseView):
                         self._BaseView__controller.display_stats()
                         self._BaseView__controller.pause()
                         return
-                    elif event.key == pygame.K_v:
-                        self._BaseView__controller.toggle_speed()
                     elif event.key == pygame.K_p:
                         self.exit()
                         self._BaseView__controller.pause()

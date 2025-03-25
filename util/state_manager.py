@@ -120,3 +120,29 @@ class Process(Enum):
     COLLECT = 3
     DROP = 4
     BUILD = 5
+
+
+class InteractionsTypes(Enum):
+    """
+    Enum representing the different types of interactions that can occur in the game.
+
+    This Enum class defines the various interaction types that can be performed.
+
+    :cvar PLACE_OBJECT: Represents placing an object on the map.
+    :cvar REMOVE_OBJECT: Represents removing an object from the map.
+    :cvar MOVE_UNIT: Represents moving a unit to a new location.
+    :cvar ATTACK: Represents attacking a target.
+    :cvar COLLECT_RESOURCE: Represents collecting resources.
+    :cvar DROP_RESOURCE: Represents dropping resources at a drop point.
+    :cvar LINK_OWNER: Represents linking an owner to an entity.
+    :cvar EXIT: Represents a player quitting the game.
+    """
+
+    PLACE_OBJECT = 0
+    REMOVE_OBJECT = 1
+    MOVE_UNIT = 2
+    ATTACK = 3
+    COLLECT_RESOURCE = 4
+    DROP_RESOURCE = 5
+    LINK_OWNER = 6
+    EXIT = 7

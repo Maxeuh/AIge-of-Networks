@@ -57,4 +57,3 @@ class AttackCommand(Command):
         if self.get_tick() <= 0:
             super().remove_command_from_list(self.__command_list)
         self.set_tick(self.get_tick() - 1)
-        self.send_network()

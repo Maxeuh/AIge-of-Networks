@@ -3,6 +3,10 @@
 #include <string.h>
 #include <time.h>
 
+#ifndef SO_REUSEPORT
+#define SO_REUSEPORT SO_REUSEADDR
+#endif
+
 // Détection du système d'exploitation
 #if defined(_WIN32) || defined(_WIN64)
 #define IS_WINDOWS 1
@@ -16,9 +20,6 @@ typedef SOCKET socket_t;
 typedef int socklen_t;
 #define SOCKET_ERROR_VALUE INVALID_SOCKET
 #define CLOSE_SOCKET(s) closesocket(s)
-#ifndef SO_REUSEPORT
-#define SO_REUSEPORT SO_REUSEADDR
-#endif
 #else
 #define IS_WINDOWS 0
 #include <unistd.h>
@@ -463,6 +464,13 @@ int main(int argc, char *argv[])
                     if (data_start)
                     {
                         data_start += 7; // Dépasser "data":
+
+                        // Retirer le "}" fermant si présent
+                        char *closing_brace = strrchr(data_start, '}');
+                        if (closing_brace)
+                        {
+                            *closing_brace = '\0';
+                        }
 
                         // Transmettre seulement les données au jeu Python en mode run
                         if (is_run_mode)

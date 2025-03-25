@@ -1,3 +1,4 @@
+from controller.network_controller import NetworkController
 from model.buildings.building import Building
 from model.buildings.farm import Farm
 from model.entity import Entity
@@ -8,11 +9,13 @@ from model.units.unit import Unit
 from model.units.villager import Villager
 from util.coordinate import Coordinate
 from util.map import Map
+from util.state_manager import InteractionsTypes
 
 
 class Interactions:
-    def __init__(self, game_map: Map) -> None:
+    def __init__(self, game_map: Map, network_controller: NetworkController) -> None:
         self.__map: Map = game_map
+        self.__network_controller: NetworkController = network_controller
 
     def get_map(self) -> Map:
         """
@@ -32,6 +35,17 @@ class Interactions:
         """
         self.__map.add(game_object, coordinate)
         game_object.set_coordinate(coordinate)
+        self.__network_controller.send(
+            {
+                "action": InteractionsTypes.PLACE_OBJECT.value,
+                "game_object": {
+                    "id": id(game_object),
+                    "name": game_object.get_name(),
+                    "size": game_object.get_size(),
+                    "coordinate": coordinate.__str__(),
+                },
+            }
+        )
 
     def remove_object(self, game_object: GameObject) -> None:
         """
@@ -40,6 +54,15 @@ class Interactions:
         :type game_object: GameObject
         """
         self.__map.remove(game_object.get_coordinate())
+        self.__network_controller.send(
+            {
+                "action": InteractionsTypes.REMOVE_OBJECT.value,
+                "game_object": {
+                    "id": id(game_object),
+                    "coordinate": game_object.get_coordinate().__str__(),
+                },
+            }
+        )
         game_object.set_coordinate(None)
         game_object.set_alive(False)
 
@@ -51,8 +74,23 @@ class Interactions:
         :param coordinate: The coordinate where to move the unit.
         :type coordinate: Coordinate
         """
+        old_coordinate = unit.get_coordinate()
         self.__map.move(unit, coordinate)
         unit.set_coordinate(coordinate)
+        self.__network_controller.send(
+            {
+                "action": InteractionsTypes.MOVE_UNIT.value,
+                "player": {
+                    "name": unit.get_player().get_name(),
+                },
+                "unit": {
+                    "id": id(unit),
+                    "name": unit.get_name(),
+                    "coordinate": coordinate.__str__(),
+                    "old_coordinate": old_coordinate.__str__(),
+                },
+            }
+        )
 
     def attack(self, attacker: Unit, target_coord: Coordinate) -> None:
         """
@@ -74,6 +112,26 @@ class Interactions:
         if isinstance(target, Resource):
             raise ValueError("Target is a resource.")
         target.damage(attacker.get_attack_per_second())  # Damage the target
+
+        self.__network_controller.send(
+            {
+                "action": InteractionsTypes.ATTACK.value,
+                "player": {
+                    "name": attacker.get_player().get_name(),
+                },
+                "attacker": {
+                    "id": id(attacker),
+                    "name": attacker.get_name(),
+                    "coordinate": attacker.get_coordinate().__str__(),
+                },
+                "target": {
+                    "id": id(target),
+                    "name": target.get_name(),
+                    "coordinate": target.get_coordinate().__str__(),
+                    "hp": target.get_hp,
+                },
+            }
+        )
 
         if not target.is_alive():
             target: Entity = target
@@ -118,6 +176,26 @@ class Interactions:
                 raise ValueError("Target is not a resource.")
             amount = resource.collect(amount)  # Collect the resource
             villager.stock_resource(resource, 1)
+            self.__network_controller.send(
+                {
+                    "action": InteractionsTypes.COLLECT_RESOURCE.value,
+                    "player": {
+                        "name": villager.get_player().get_name(),
+                    },
+                    "villager": {
+                        "id": id(villager),
+                        "name": villager.get_name(),
+                        "coordinate": villager.get_coordinate().__str__(),
+                    },
+                    "resource": {
+                        "id": id(resource),
+                        "name": resource.get_name(),
+                        "coordinate": resource.get_coordinate().__str__(),
+                        "hp": resource.get_hp(),
+                    },
+                    "amount": amount,
+                }
+            )
             if not resource.is_alive():
                 self.remove_object(resource)  # Remove the resource from the map
 
@@ -143,8 +221,29 @@ class Interactions:
         if not target.is_resources_drop_point():
             raise ValueError("Target is not a resource drop point.")
 
-        for resource, amount in villager.empty_resource().items():
+        collected_resources = villager.empty_resource()
+        for resource, amount in collected_resources.items():
             player.collect(resource, amount)
+
+        self.__network_controller.send(
+            {
+                "action": InteractionsTypes.DROP_RESOURCE.value,
+                "player": {
+                    "name": player.get_name(),
+                },
+                "villager": {
+                    "id": id(villager),
+                    "name": villager.get_name(),
+                    "coordinate": villager.get_coordinate().__str__(),
+                },
+                "target": {
+                    "id": id(target),
+                    "name": target.get_name(),
+                    "coordinate": target.get_coordinate().__str__(),
+                },
+                "resources": collected_resources,
+            }
+        )
 
     def link_owner(self, player: Player, entity: Entity) -> None:
         """
@@ -159,3 +258,17 @@ class Interactions:
             player.add_building(entity)
         if isinstance(entity, Unit):
             player.add_unit(entity)
+
+        self.__network_controller.send(
+            {
+                "action": InteractionsTypes.LINK_OWNER.value,
+                "player": {
+                    "name": player.get_name(),
+                },
+                "entity": {
+                    "id": id(entity),
+                    "name": entity.get_name(),
+                    "coordinate": entity.get_coordinate().__str__(),
+                },
+            }
+        )

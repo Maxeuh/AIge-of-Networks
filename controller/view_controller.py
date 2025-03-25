@@ -24,11 +24,7 @@ class ViewController:
         self.__game_controller: "GameController" = game_controller
         self.__current_view: BaseView = TerminalView(self)
         self.__pause: bool = False
-        self.__speed = 1  # Initialize speed
-
-    def toggle_speed(self) -> None:
-        """Toggle the speed between 1 and 60."""
-        self.__speed = 10 if self.__speed == 1 else 1
+        self.__speed = 10
 
     def get_speed(self) -> int:
         """Get the current speed."""

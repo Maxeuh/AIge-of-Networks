@@ -55,27 +55,5 @@ class CollectCommand(Command):
                 self.get_interactions().collect_resource(
                     self.get_entity(), self.__target_coord, 1
                 )
-                self.send_network()
-                super().remove_command_from_list(self.__command_list)
+        super().remove_command_from_list(self.__command_list)
         self.set_tick(self.get_tick() - 1)
-
-    def send_network(self):
-        """
-        Sends the collect command information via network.
-        """
-        entity = self.get_entity()
-        # Get resource type being collected
-        target_obj = self.get_interactions().get_map().get(self.__target_coord)
-        resource_type = target_obj.__class__.__name__ if target_obj else "Unknown"
-        
-        command_data = {
-            "command": "COLLECT",
-            "entity_id": id(entity),
-            "entity_type": entity.__class__.__name__, 
-            "entity_name": entity.get_name(),
-            "player": self.get_player().get_name(),
-            "resource_x": self.__target_coord.get_x(),
-            "resource_y": self.__target_coord.get_y(),
-            "resource_type": resource_type
-        }
-        super().send_network(json.dumps(command_data))

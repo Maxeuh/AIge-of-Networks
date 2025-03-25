@@ -50,4 +50,3 @@ class DropCommand(Command):
             self.get_player(), self.get_entity(), self.__target_coord
         )
         super().remove_command_from_list(self.__command_list)
-        self.send_network()

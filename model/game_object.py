@@ -3,7 +3,7 @@ from util.coordinate import Coordinate
 
 class GameObject:
     """This class represents an object in the game."""
-    
+
     def __init__(self, name: str, letter: str, hp: int):
         """
         Initializes a game object.
@@ -22,7 +22,8 @@ class GameObject:
         self.__alive: bool = True
         self.__size: int = 1
         self.__sprite_path: str = None
-    
+        self.__id: id = None
+
     def get_name(self) -> str:
         """
         Returns the name of the object.
@@ -31,7 +32,7 @@ class GameObject:
         :rtype: str
         """
         return self.__name
-    
+
     def get_letter(self) -> str:
         """
         Returns the letter of the object.
@@ -40,7 +41,7 @@ class GameObject:
         :rtype: str
         """
         return self.__letter
-    
+
     def get_hp(self) -> int:
         """
         Returns the health points of the object.
@@ -49,7 +50,7 @@ class GameObject:
         :rtype: int
         """
         return self.__hp
-    
+
     def damage(self, damage: int) -> None:
         """
         Inflicts damage to the object.
@@ -67,7 +68,7 @@ class GameObject:
             self.__alive = False
         else:
             self.__hp -= damage
-    
+
     def get_coordinate(self) -> Coordinate:
         """
         Returns the coordinate of the object.
@@ -76,7 +77,7 @@ class GameObject:
         :rtype: Coordinate
         """
         return self.__coordinate
-    
+
     def set_coordinate(self, coordinate: Coordinate) -> None:
         """
         Sets the coordinate of the object.
@@ -94,7 +95,7 @@ class GameObject:
         :rtype: bool
         """
         return self.__alive
-    
+
     def set_alive(self, alive: bool) -> None:
         """
         Sets the alive status of the object.
@@ -112,7 +113,7 @@ class GameObject:
         :rtype: int
         """
         return self.__size
-    
+
     def set_size(self, size: int) -> None:
         """
         Sets the size of the object.
@@ -130,7 +131,7 @@ class GameObject:
         :rtype: str
         """
         return self.__sprite_path
-    
+
     def set_sprite_path(self, path: str) -> None:
         """
         Sets the path to the sprite of the object.
@@ -147,4 +148,22 @@ class GameObject:
         :return: A string representation of the object.
         :rtype: str
         """
-        return (f"{self.get_name()} ({self.get_letter()}) - HP : {self.get_hp()}")
+        return f"{self.get_name()} ({self.get_letter()}) - HP : {self.get_hp()}"
+
+    def set_id(self, id: int) -> None:
+        """
+        Sets the id of the object.
+
+        :param id: The new id of the object.
+        :type: int
+        """
+        self.__id = id
+
+    def get_id(self) -> int:
+        """
+        Returns the id of the object.
+
+        :return: The id of the object.
+        :rtype: int
+        """
+        return self.__id

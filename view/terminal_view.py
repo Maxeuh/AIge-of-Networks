@@ -150,12 +150,6 @@ class TerminalView(BaseView):
         bottom_right_coord = self.__to_coord - 1
         bottom_right = f"({bottom_right_coord.get_x()}, {bottom_right_coord.get_y()})"
 
-        # Determine speed factor based on self.__isFaster
-        speed_factor = "x10" if self.__isFaster else "x1"
-
-        # Add the speed factor to the coordinates
-        top_left = f"{top_left} {speed_factor}"
-
         # Update the top-left and bottom-right coordinates in the line
         line[0] = f"{top_left}{line[0][len(top_left):]}"
         line[-1] = f"{line[-1][:len(line[-1]) - len(bottom_right)]}{bottom_right}"
@@ -209,7 +203,6 @@ class TerminalView(BaseView):
         TAB is used to pause the game and display the stats menu.
         ECHAP is used to exit the game.
         F9 is used to take switch view.
-        V is used to toggle speed between 1 and 60.
 
         :return: None
         """
@@ -246,12 +239,6 @@ class TerminalView(BaseView):
             elif key.code == self.__terminal.KEY_F9:
                 self.exit()
                 self._BaseView__controller.switch_view()
-            elif key.lower() == "v":
-                self._BaseView__controller.toggle_speed()
-                if self.__isFaster == False:
-                    self.__isFaster = True
-                else:
-                    self.__isFaster = False
 
             self.__from_coord = Coordinate(
                 max(

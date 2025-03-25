@@ -2,6 +2,7 @@ import socket
 import subprocess
 import os
 import atexit
+import json
 
 
 class NetworkController:
@@ -23,7 +24,7 @@ class NetworkController:
             self.__send_sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
             self.__recv_sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
         self.__recv_sock.bind(self.__recv_address)
-        self.__recv_sock.settimeout(0.1)
+        self.__recv_sock.settimeout(0.05)
         self.__network_bridge_process = None
         self.__bridge_exists = True
 
@@ -81,7 +82,7 @@ class NetworkController:
         """
         Sends a message to the C program that runs the game.
         """
-        self.__send_sock.sendto(message.encode(), self.__send_address)
+        self.__send_sock.sendto(json.dumps(message).encode(), self.__send_address)
 
     def receive(self) -> list:
         """
@@ -91,9 +92,15 @@ class NetworkController:
         # Lire tous les messages disponibles jusqu'à ce que la file soit vide
         while True:
             try:
-                data, _ = self.__recv_sock.recvfrom(1024)
-                message = data.decode()
-                messages.append(message)
+                data, _ = self.__recv_sock.recvfrom(65507)
+                if not data:
+                    break
+                message_str = data.decode()
+                try:
+                    message = json.loads(message_str)
+                    messages.append(message)
+                except json.JSONDecodeError as e:
+                    raise e
             except socket.timeout:
                 # Plus de messages disponibles, on sort de la boucle
                 break

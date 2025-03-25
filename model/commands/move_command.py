@@ -54,7 +54,6 @@ class MoveCommand(Command):
         if self.__start:
             self.__start = False
             self.get_interactions().move_unit(self.get_entity(), self.__target_coord)
-            self.send_network()
         if self.get_tick() <= 0:
             super().remove_command_from_list(self.__command_list)
         self.set_tick(self.get_tick() - 1)
@@ -73,6 +72,6 @@ class MoveCommand(Command):
             "from_x": self.__original_x,  # Use stored original x
             "from_y": self.__original_y,  # Use stored original y
             "to_x": self.__target_coord.get_x(),
-            "to_y": self.__target_coord.get_y()
+            "to_y": self.__target_coord.get_y(),
         }
         super().send_network(json.dumps(command_data))

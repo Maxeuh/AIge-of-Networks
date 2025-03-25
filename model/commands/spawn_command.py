@@ -96,7 +96,6 @@ class SpawnCommand(Command):
             self.get_interactions().place_object(
                 self.__place_holder, self.__target_coord
             )
-            self.send_network()
 
         if self.get_tick() <= 0:
             if self in self.__command_list:
@@ -104,7 +103,6 @@ class SpawnCommand(Command):
                 spawned: Unit = UnitSpawner()[self.get_entity().get_name()]
                 self.get_interactions().place_object(spawned, self.__target_coord)
                 self.get_interactions().link_owner(self.get_player(), spawned)
-                self.send_network()
 
                 super().remove_command_from_list(self.__command_list)
             else:
