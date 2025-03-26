@@ -563,16 +563,20 @@ class GameController:
         )
         obj.set_id(interaction["game_object"]["id"])
         obj.set_coordinate(coordinate)
-        map_object = self.__map.get(coordinate)
-        if map_object and map_object.get_id() != interaction["game_object"]["id"]:
-            for i in range(map_object.get_size()):
-                for j in range(map_object.get_size()):
-                    if self.__map.get(
+        size = self.__map.get(coordinate).get_size()
+        for i in range(size):
+            for j in range(size):
+                map_object = self.__map.get(
+                    Coordinate(coordinate.get_x() + i, coordinate.get_y() + j)
+                )
+                if (
+                    map_object
+                    and map_object.get_id() != interaction["game_object"]["id"]
+                ):
+                    self.__map.remove(
                         Coordinate(coordinate.get_x() + i, coordinate.get_y() + j)
-                    ):
-                        self.__map.remove(
-                            Coordinate(coordinate.get_x() + i, coordinate.get_y() + j)
-                        )
+                    )
+
         self.__map.add(obj, coordinate)
 
     def __handle_remove_object(self, interaction):
@@ -600,7 +604,8 @@ class GameController:
             self.__map.add(unit, coordinate)
         else:
             object = self.__map.get(coordinate)
-            self.__map.remove(unit.get_coordinate())
+            if self.__map.get(unit.get_coordinate()):
+                self.__map.remove(unit.get_coordinate())
             if object and object.get_id() != interaction["unit"]["id"]:
                 self.__map.remove(coordinate)
             unit.set_coordinate(coordinate)

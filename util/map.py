@@ -592,7 +592,11 @@ class Map:
         object: GameObject = self.get(coordinate)
         if object is None:
             return "white"
-        if isinstance(object, Entity) and object.get_player() is not None:
+        if (
+            not isinstance(object, Resource)
+            and object.get_name != "Place holder"
+            and object.get_player() is not None
+        ):
             return object.get_player().get_color()
         return "white"
 
