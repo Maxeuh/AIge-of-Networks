@@ -563,16 +563,13 @@ class GameController:
         )
         obj.set_id(interaction["game_object"]["id"])
         obj.set_coordinate(coordinate)
-        size = self.__map.get(coordinate).get_size()
+        size = obj.get_size()
         for i in range(size):
             for j in range(size):
                 map_object = self.__map.get(
                     Coordinate(coordinate.get_x() + i, coordinate.get_y() + j)
                 )
-                if (
-                    map_object
-                    and map_object.get_id() != interaction["game_object"]["id"]
-                ):
+                if (map_object):
                     self.__map.remove(
                         Coordinate(coordinate.get_x() + i, coordinate.get_y() + j)
                     )
