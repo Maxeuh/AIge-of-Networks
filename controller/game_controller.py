@@ -569,7 +569,7 @@ class GameController:
                 map_object = self.__map.get(
                     Coordinate(coordinate.get_x() + i, coordinate.get_y() + j)
                 )
-                if (map_object):
+                if map_object:
                     self.__map.remove(
                         Coordinate(coordinate.get_x() + i, coordinate.get_y() + j)
                     )
@@ -578,7 +578,7 @@ class GameController:
 
     def __handle_remove_object(self, interaction):
         coordinate = Coordinate(
-            *map(int, interaction["coordinate"].strip("()").split(","))
+            *map(int, interaction["game_object"]["coordinate"].strip("()").split(","))
         )
         object = self.__map.get(coordinate)
         if object and object.get_id() == interaction["id"]:
