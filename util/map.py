@@ -594,7 +594,7 @@ class Map:
             return "white"
         if (
             not isinstance(object, Resource)
-            and object.get_name != "Place holder"
+            and object.get_name != "Place Holder"
             and object.get_player() is not None
         ):
             return object.get_player().get_color()
