@@ -1,0 +1,37 @@
+view.menus package
+==================
+
+Submodules
+----------
+
+view.menus.load\_view module
+----------------------------
+
+.. automodule:: view.menus.load_view
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+view.menus.menu\_view module
+----------------------------
+
+.. automodule:: view.menus.menu_view
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+view.menus.settings\_view module
+--------------------------------
+
+.. automodule:: view.menus.settings_view
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+Module contents
+---------------
+
+.. automodule:: view.menus
+   :members:
+   :undoc-members:
+   :show-inheritance:

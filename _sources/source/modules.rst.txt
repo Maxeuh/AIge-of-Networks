@@ -1,0 +1,8 @@
+AIge-of-Networks
+================
+
+.. toctree::
+   :maxdepth: 4
+
+   main
+   view
