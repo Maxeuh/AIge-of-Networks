@@ -581,7 +581,7 @@ class GameController:
             *map(int, interaction["game_object"]["coordinate"].strip("()").split(","))
         )
         object = self.__map.get(coordinate)
-        if object and object.get_id() == interaction["id"]:
+        if object and object.get_id() == interaction["game_object"]["id"]:
             self.__map.remove(coordinate)
 
     def __handle_move_unit(self, interaction: list, player: Player):
